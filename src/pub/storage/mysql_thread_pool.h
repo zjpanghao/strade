@@ -83,6 +83,13 @@ struct MysqlThreadSharedInfo {
     return mysql_job;
   }
 
+  void pushJob(MysqlJob* job) {
+    pthread_mutex_lock(&mutex_);
+    task_queue_.push(job);
+    pthread_mutex_unlock(&mutex_);
+    sem_post(&task_num_);
+  }
+
   sem_t task_num_;
   pthread_mutex_t mutex_;
   MYSQL_TASK_QUEUE task_queue_;

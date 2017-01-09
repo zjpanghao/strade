@@ -79,10 +79,7 @@ void MysqlThreadPool::QueryAsync(MYSQL_JOB_TYPE type,
                                  MYSQL_HANDLER call_back,
                                  void* param) {
   MysqlJob* mysql_job = new MysqlJob(type, dict, call_back, param);
-  pthread_mutex_lock(&shared_info_.mutex_);
-  shared_info_.task_queue_.push(mysql_job);
-  pthread_mutex_unlock(&shared_info_.mutex_);
-  sem_post(&shared_info_.task_num_);
+  shared_info_.pushJob(mysql_job);
 }
 
 // 同步执行
