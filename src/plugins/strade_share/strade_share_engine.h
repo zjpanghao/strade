@@ -166,12 +166,6 @@ class SSEngineImpl : public SSEngine {
     return false;
   }
 
-  bool AddStockTotalInfo(const std::string& stock_code,
-                         const strade_logic::StockTotalInfo& stock_total_info) {
-    share_cache_.stocks_map_[stock_code] = stock_total_info;
-    return true;
-  }
-
  private:
   threadrw_t* lock_;
   StradeShareCache share_cache_;

@@ -14,9 +14,9 @@ StradeShareDB::StradeShareDB(config::FileConfig* config,
     : engine_impl_(engine) {
   assert(config->mysql_db_list_.size() >= 2);
   LOG_DEBUG2("db_list size=%d", config->mysql_db_list_.size());
-  base::ConnAddr& read_conn = config->mysql_db_list_.front();
+  base::ConnAddr read_conn = config->mysql_db_list_.front();
   config->mysql_db_list_.pop_front();
-  base::ConnAddr& write_conn = config->mysql_db_list_.front();
+  base::ConnAddr write_conn = config->mysql_db_list_.front();
   config->mysql_db_list_.pop_front();
   mysql_engine_ = new base_logic::MysqlThreadPool(read_conn, write_conn, 1);
 }

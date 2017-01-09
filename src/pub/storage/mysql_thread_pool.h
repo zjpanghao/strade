@@ -2,8 +2,8 @@
 // Created by Harvey on 2016/12/29.
 //
 
-#ifndef WOOKONG_REFACTOR_MYSQL_THREAD_POOL_H
-#define WOOKONG_REFACTOR_MYSQL_THREAD_POOL_H
+#ifndef STRADE_SRC_PUB_STORAGE_MYSQL_THREAD_POOL_H
+#define STRADE_SRC_PUB_STORAGE_MYSQL_THREAD_POOL_H
 
 #include "config/config.h"
 #include "storage/storage.h"
@@ -30,6 +30,7 @@ typedef void (* MYSQL_HANDLER)(base_logic::DictionaryValue*, void* param);
 typedef std::list<base_storage::DBStorageEngine*> MYSQL_ENGINE_POOL;
 
 namespace {
+
 class MysqlJob;
 typedef std::queue<MysqlJob*> MYSQL_TASK_QUEUE;
 
@@ -259,4 +260,4 @@ class MysqlThreadPool {
 
 } /* namespace base_logic */
 
-#endif //WOOKONG_REFACTOR_MYSQL_THREAD_POOL_H
+#endif //STRADE_SRC_PUB_STORAGE_MYSQL_THREAD_POOL_H

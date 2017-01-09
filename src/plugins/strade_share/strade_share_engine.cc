@@ -121,7 +121,8 @@ bool SSEngineImpl::UpdateStockHistDataVec(
 bool SSEngineImpl::AddStockTotalInfoNonblock(
     const strade_logic::StockTotalInfo& stock_total_info) {
   const std::string& stock_code = stock_total_info.GetStockCode();
-  return AddStockTotalInfo(stock_code, stock_total_info);
+  share_cache_.stocks_map_[stock_code] = stock_total_info;
+  return true;
 }
 
 bool SSEngineImpl::AddStockTotalInfoBlock(

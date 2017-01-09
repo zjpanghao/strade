@@ -24,8 +24,8 @@ MysqlThreadPool::~MysqlThreadPool() {
 }
 
 void MysqlThreadPool::Initialize() {
-  CreateSqlThread();
   CreateEnginePool();
+  CreateSqlThread();
 }
 
 void MysqlThreadPool::CreateSqlThread() {
