@@ -14,7 +14,7 @@ void GetDicStringAsReal(base_logic::DictionaryValue& dict,
   out = double(atof(temp.c_str()));
 }
 
-void GetDicAsInteger(base_logic::DictionaryValue& dict,
+void GetDicStringAsInteger(base_logic::DictionaryValue& dict,
                      const std::wstring& name,
                      int32& out) {
   std::string temp;
