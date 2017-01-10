@@ -7,7 +7,6 @@
 
 #include "logic/base_values.h"
 #include "logic/logic_comm.h"
-#include "tools/map_util.h"
 #include "storage/mysql_thread_pool.h"
 
 namespace strade_logic {
@@ -55,7 +54,7 @@ class StockRealInfo {
 
    public:
     std::string stock_code_;
-    time_t trade_time_;
+    int32 trade_time_;
     double change_percent_;
     double trade_;
     double open_;
