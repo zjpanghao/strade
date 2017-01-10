@@ -31,6 +31,7 @@ class StradeShareDB {
  private:
   static void OnFetchStockBasicInfoCallback(
       base_logic::DictionaryValue* dict, void* param);
+
   static void OnFetchStockHistInfoCallback(
       base_logic::DictionaryValue* dict, void* param);
 

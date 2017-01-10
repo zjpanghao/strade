@@ -98,6 +98,7 @@ bool StradeShareDB::FetchStockHistInfo(
   AppendStringValue(column_name_list, "date");
   AppendStringValue(column_name_list, "open");
   AppendStringValue(column_name_list, "high");
+  AppendStringValue(column_name_list, "close");
   AppendStringValue(column_name_list, "low");
   AppendStringValue(column_name_list, "qfq_close");
   dict->Set(MYSQL_QUERY_PARAM, column_name_list);
@@ -121,8 +122,6 @@ void StradeShareDB::OnFetchStockHistInfoCallback(
   dict->GetList(MYSQL_RESULT_LIST, &result_list);
   if (NULL != result_list) {
     size_t count = result_list->GetSize();
-    strade_logic::StockTotalInfo* stock_total_info =
-        static_cast<strade_logic::StockTotalInfo*>(param);
     std::string stock_code;
     std::vector<strade_logic::StockHistInfo> stock_hist_vec;
     while (count > 0) {

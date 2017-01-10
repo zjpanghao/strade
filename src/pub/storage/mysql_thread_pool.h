@@ -125,6 +125,7 @@ class MysqlJob {
     } else {
       dict_->GetString(MYSQL_STORAGE_NAME, &sql_);
     }
+    LOG_DEBUG2("excute sql=%s", sql_.c_str());
     r = engine->SQLExec(sql_.c_str());
     if (!r) {
       LOG_ERROR("exec sql error");
