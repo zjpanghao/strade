@@ -60,7 +60,7 @@ void StockRealInfo::Deserialize(base_logic::DictionaryValue& dict) {
   GetDicStringAsReal(dict, L"high", data_->high_);
   GetDicStringAsReal(dict, L"low", data_->low_);
   GetDicStringAsReal(dict, L"settlement", data_->settlement_);
-  GetDicAsInteger(dict, L"time", data_->trade_time_);
+  GetDicStringAsInteger(dict, L"time", data_->trade_time_);
   GetDicStringAsReal(dict, L"volume", data_->volume_);
 }
 
