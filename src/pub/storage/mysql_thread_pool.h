@@ -26,6 +26,12 @@
 
 namespace base_logic {
 
+enum MYSQL_JOB_TYPE {
+  MYSQL_READ = 1,
+  MYSQL_WRITE = 2,
+  MYSQL_STORAGE = 3,
+};
+
 typedef void (* MYSQL_HANDLER)(base_logic::DictionaryValue*, void* param);
 typedef std::list<base_storage::DBStorageEngine*> MYSQL_ENGINE_POOL;
 

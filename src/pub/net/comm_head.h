@@ -5,23 +5,13 @@
 #ifndef GEORGE_NET_COMM_HEAD_H__
 #define GEORGE_NET_COMM_HEAD_H__
 
-namespace george_logic {
+namespace strade_logic {
 
 enum PACKET_TYPE {
   ERROR_TYPE = 0,
   STO_TYPE = 5,
 };
-}
+} /* namespace strade_logic */
 
-namespace base_logic {
-
-enum MYSQL_JOB_TYPE {
-  MYSQL_PING = 0,
-  MYSQL_READ = 1,
-  MYSQL_WRITE = 2,
-  MYSQL_STORAGE = 3,
-};
-
-}
 
 #endif

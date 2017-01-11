@@ -103,7 +103,14 @@ config.o: $(THIRD_PATH)/config/config.cc
 strade_basic_info.o : $(USER_DIR)/logic/strade_basic_info.cc $(USER_DIR)/logic/strade_basic_info.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/logic/strade_basic_info.cc $(INCLUDE_PATHS)
 
+observer.o : $(USER_DIR)/logic/observer.cc $(USER_DIR)/logic/observer.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/logic/observer.cc $(INCLUDE_PATHS)
+
+subject.o : $(USER_DIR)/logic/subject.cc $(USER_DIR)/logic/subject.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/logic/subject.cc $(INCLUDE_PATHS)
+
 $(PLUGIN) : basictypes.o config.o data_engine.o strade_share_engine.o strade_share_db.o strade_basic_info.o mysql_thread_pool.o\
+	observer.o subject.o \
 	$(CUSTOM_THIRD_PATH)/dmg_fp/lib/dmg_fp.a $(LIB_DIR)/base/lib/mybase.a $(LIB_DIR)/third_party/lib/libhiredis.a
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LINK_PATHS)  -lpthread -lexpat -lrt -ldl -lmysqlclient \
 	$^  -o $@ -lexpat -lmysqlclient

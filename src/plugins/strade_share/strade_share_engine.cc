@@ -44,6 +44,20 @@ bool SSEngineImpl::Init() {
   return true;
 }
 
+void SSEngineImpl::AttachObserver(strade_logic::Observer* observer) {
+  if(NULL != observer) {
+    base_logic::WLockGd lk(lock_);
+    this->Attach(observer);
+  }
+}
+
+void SSEngineImpl::DetachObserver(strade_logic::Observer* observer) {
+  if(NULL != observer) {
+    base_logic::WLockGd lk(lock_);
+    this->Detach(observer);
+  }
+}
+
 void SSEngineImpl::LoadAllStockBasicInfo() {
   base_logic::WLockGd lk(lock_);
   mysql_engine_->FetchStockBasicInfo();
@@ -63,25 +77,31 @@ void SSEngineImpl::OnLoadAllStockBasicInfo(
 
 void SSEngineImpl::UpdateStockRealMarketData(
     REAL_MARKET_DATA_VEC& stocks_market_data) {
-  base_logic::WLockGd lk(lock_);
-  int total_count = 0;
-  REAL_MARKET_DATA_VEC::const_iterator iter(stocks_market_data.begin());
-  for (; iter != stocks_market_data.end(); ++iter) {
-    const strade_logic::StockRealInfo& stock_real_info = *iter;
-    const std::string& stock_code = stock_real_info.GetStockCode();
-    const time_t& trade_time = stock_real_info.GetTradeTime();
-    strade_logic::StockTotalInfo* stock_total_info = NULL;
-    GetStockTotalNonBlock(stock_code, &stock_total_info);
-    if (NULL == stock_total_info) {
-      LOG_ERROR2("UpdateStockRealMarketData stock_code=%s, not exists!!!!",
-                 stock_code.c_str());
-      continue;
+
+  {
+    base_logic::WLockGd lk(lock_);
+    int total_count = 0;
+    REAL_MARKET_DATA_VEC::const_iterator iter(stocks_market_data.begin());
+    for (; iter != stocks_market_data.end(); ++iter) {
+      const strade_logic::StockRealInfo& stock_real_info = *iter;
+      const std::string& stock_code = stock_real_info.GetStockCode();
+      const time_t& trade_time = stock_real_info.GetTradeTime();
+      strade_logic::StockTotalInfo* stock_total_info = NULL;
+      GetStockTotalNonBlock(stock_code, &stock_total_info);
+      if (NULL == stock_total_info) {
+        LOG_ERROR2("UpdateStockRealMarketData stock_code=%s, not exists!!!!",
+                   stock_code.c_str());
+        continue;
+      }
+      stock_total_info->AddStockRealInfoByTime(trade_time, stock_real_info);
+      ++total_count;
     }
-    stock_total_info->AddStockRealInfoByTime(trade_time, stock_real_info);
-    ++total_count;
+    LOG_DEBUG2("UpdateStockRealMarketData total_count=%d, current_time=%d",
+               total_count, time(NULL));
   }
-  LOG_DEBUG2("UpdateStockRealMarketData total_count=%d, current_time=%d",
-             total_count, time(NULL));
+
+  // 通知所有需要实时行情数据的观察者
+  this->Notify(strade_logic::REALTIME_MARKET_VALUE_UPDATE);
 }
 
 bool SSEngineImpl::UpdateStockHistInfoByDate(const std::string& stock_code,
@@ -204,5 +224,6 @@ bool SSEngineImpl::GetStockRealMarketDataByTime(
   }
   return stock_total_info->GetStockRealInfoByTradeTime(time, &stock_real_info);
 }
+
 
 } /* namespace strade_share */

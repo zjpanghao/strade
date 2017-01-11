@@ -22,6 +22,22 @@ class SomeUtils {
   static void* GetLibraryFunction(const std::string& library_name,
                                   const std::string& func_name);
 
+
+  static void GetDicStringAsReal(base_logic::DictionaryValue& dict,
+                          const std::wstring& name,
+                          double& out) {
+    std::string temp;
+    dict.GetString(name, &temp);
+    out = double(atof(temp.c_str()));
+  }
+
+  static void GetDicStringAsInteger(base_logic::DictionaryValue& dict,
+                             const std::wstring& name,
+                             int32& out) {
+    std::string temp;
+    dict.GetString(name, &temp);
+    out = atoi(temp.c_str());
+  }
 };
 
 class LogicUnit {

@@ -10,7 +10,9 @@
 #include "strade_share_db.h"
 
 #include "logic/strade_basic_info.h"
-#include "tools/map_util.h"
+#include "logic/observer.h"
+#include "logic/subject.h"
+#include "logic/comm_head.h"
 
 #include <vector>
 
@@ -31,6 +33,14 @@ typedef std::vector<strade_logic::StockHistInfo> STOCK_HIST_DATA_VEC;
 class SSEngine {
  public:
   virtual bool Init() = 0;
+
+  // 注册观察者
+  virtual void AttachObserver(
+      strade_logic::Observer* observer) = 0;
+
+  // 解绑观察者
+  virtual void DetachObserver(
+      strade_logic::Observer* observer) = 0;
 
   // 更新实时行情数据
   virtual void UpdateStockRealMarketData(
@@ -91,7 +101,7 @@ struct StradeShareCache {
   STOCKS_MAP stocks_map_;
 };
 
-class SSEngineImpl : public SSEngine {
+class SSEngineImpl : public SSEngine, public strade_logic::Subject{
  public:
   SSEngineImpl();
   virtual ~SSEngineImpl() {}
@@ -99,6 +109,11 @@ class SSEngineImpl : public SSEngine {
   static SSEngineImpl* GetInstance();
 
   virtual bool Init();
+
+  virtual void AttachObserver(
+      strade_logic::Observer* observer);
+
+  virtual void DetachObserver(strade_logic::Observer* observer);
 
   void LoadAllStockBasicInfo();
 

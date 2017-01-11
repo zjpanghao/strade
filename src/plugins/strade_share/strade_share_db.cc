@@ -44,7 +44,7 @@ bool StradeShareDB::FetchStockBasicInfo() {
   dict->Set(MYSQL_QUERY_PARAM, column_name_list);
 
   dict->SetString(MYSQL_QUERY_CONDITION,
-                  "FROM algo_get_stock_basics WHERE CODE IS NOT NULL;");
+                  "FROM stock_basic_data WHERE CODE IS NOT NULL;");
 
   // 添加任务
   mysql_engine_->QuerySync(base_logic::MYSQL_READ, dict,
@@ -104,7 +104,7 @@ bool StradeShareDB::FetchStockHistInfo(
   dict->Set(MYSQL_QUERY_PARAM, column_name_list);
 
   std::stringstream ss;
-  ss << " FROM algo_get_hist_data WHERE CODE = '";
+  ss << " FROM stock_hist_data WHERE CODE = '";
   ss << stock_code << "'";
   ss << " ORDER BY DATE DESC LIMIT 60;";
   dict->SetString(MYSQL_QUERY_CONDITION, ss.str());
