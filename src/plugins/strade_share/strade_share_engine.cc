@@ -147,6 +147,7 @@ bool SSEngineImpl::AddStockTotalInfoBlock(
     const strade_logic::StockTotalInfo& stock_total_info) {
   base_logic::WLockGd lk(lock_);
   AddStockTotalInfoNonblock(stock_total_info);
+  return true;
 }
 
 const STOCKS_MAP& SSEngineImpl::GetAllStockTotalMap() {
