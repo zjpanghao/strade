@@ -38,17 +38,6 @@ StockRealInfo::~StockRealInfo() {
   }
 }
 
-void StockRealInfo::Deserialize(base_logic::DictionaryValue& dict) {
-  base_logic::SomeUtils::GetDicStringAsReal(dict, L"changepercent", data_->change_percent_);
-  base_logic::SomeUtils::GetDicStringAsReal(dict, L"trade", data_->trade_);
-  base_logic::SomeUtils::GetDicStringAsReal(dict, L"open", data_->open_);
-  base_logic::SomeUtils::GetDicStringAsReal(dict, L"high", data_->high_);
-  base_logic::SomeUtils::GetDicStringAsReal(dict, L"low", data_->low_);
-  base_logic::SomeUtils::GetDicStringAsReal(dict, L"settlement", data_->settlement_);
-  base_logic::SomeUtils::GetDicStringAsInteger(dict, L"time", data_->trade_time_);
-  base_logic::SomeUtils::GetDicStringAsReal(dict, L"volume", data_->volume_);
-}
-
 StockHistInfo::StockHistInfo() {
   data_ = new Data();
 }
@@ -80,14 +69,16 @@ StockHistInfo::~StockHistInfo() {
   }
 }
 
-void StockHistInfo::Deserialize(base_logic::DictionaryValue& dict) {
+void StockHistInfo::Deserialize() {
   double qfq_close = 0.0;
-  dict.GetString(L"date", &data_->date_);
-  base_logic::SomeUtils::GetDicStringAsReal(dict, L"open", data_->open_);
-  base_logic::SomeUtils::GetDicStringAsReal(dict, L"high", data_->high_);
-  base_logic::SomeUtils::GetDicStringAsReal(dict, L"close", data_->close_);
-  base_logic::SomeUtils::GetDicStringAsReal(dict, L"low", data_->low_);
-  base_logic::SomeUtils::GetDicStringAsReal(dict, L"qfq_close", qfq_close);
+
+  GetString(0, data_->date_);
+  GetReal(1, data_->open_);
+  GetReal(data_->high_);
+  GetReal(3, data_->close_);
+  GetReal(4, data_->low_);
+  GetReal(5, qfq_close);
+
   if (qfq_close > 1) {
     data_->qfq_close_ = qfq_close;
   } else {
@@ -100,49 +91,6 @@ void StockHistInfo::Deserialize(base_logic::DictionaryValue& dict) {
 //             data_->open_,
 //             data_->high_,
 //             data_->close_);
-}
-
-StockBasicInfo::StockBasicInfo() {
-  data_ = new Data();
-}
-
-StockBasicInfo::StockBasicInfo(const StockBasicInfo& rhs)
-    : data_(rhs.data_) {
-  if (NULL != data_) {
-    data_->AddRef();
-  }
-}
-
-StockBasicInfo& StockBasicInfo::operator=(const StockBasicInfo& rhs) {
-  if (this == &rhs) {
-    return (*this);
-  }
-  if (NULL != rhs.data_) {
-    rhs.data_->AddRef();
-  }
-  if (NULL == data_) {
-    data_->Release();
-  }
-  data_ = rhs.data_;
-  return (*this);
-}
-
-StockBasicInfo::~StockBasicInfo() {
-  if (NULL != data_) {
-    data_->Release();
-  }
-}
-
-void StockBasicInfo::Deserialize(base_logic::DictionaryValue& dict) {
-  dict.GetString(L"code", &data_->code_);
-  dict.GetString(L"name", &data_->name_);
-  base_logic::SomeUtils::GetDicStringAsReal(dict, L"totalAssets", data_->outstanding_);
-  base_logic::SomeUtils::GetDicStringAsReal(dict, L"bvps", data_->bvps_);
-  base_logic::SomeUtils::GetDicStringAsReal(dict, L"pb", data_->pb_);
-  data_->market_value_ = data_->outstanding_ * data_->bvps_ * data_->pb_;
-
-  LOG_DEBUG2("stock_code=%s, outstanding=.2%f",
-             data_->code_.c_str(), data_->outstanding_);
 }
 
 StockTotalInfo::StockTotalInfo() {
@@ -176,11 +124,16 @@ StockTotalInfo::~StockTotalInfo() {
   }
 }
 
-void StockTotalInfo::DeserializeStockBasicInfo(
-    base_logic::DictionaryValue& dict) {
-  dict.GetString(L"code", &data_->code_);
-  data_->stock_basic_info_.Deserialize(dict);
-  LOG_DEBUG2("load stock_code=%s", data_->code_.c_str());
+void StockTotalInfo::Deserialize() {
+  GetString(0, data_->code_);
+  GetString(1, data_->name_);
+  GetReal(2, data_->outstanding_);
+  GetReal(3, data_->bvps_);
+  GetReal(4, data_->pb_);
+
+  data_->market_value_ = data_->outstanding_ * data_->bvps_ * data_->pb_;
+  LOG_DEBUG2("stock_code=%s, outstanding=%.2f",
+             data_->code_.c_str(), data_->outstanding_);
 }
 
 void StockTotalInfo::ClearRealMap() {

@@ -6,7 +6,8 @@
 #define STRADE_STRADE_SHARE_DB_H
 
 #include "logic/strade_basic_info.h"
-#include "storage/mysql_thread_pool.h"
+#include "storage/mysql_engine.h"
+#include "dao/abstract_dao.h"
 
 namespace strade_share {
 
@@ -17,34 +18,29 @@ class StradeShareDB {
                 SSEngineImpl* engine);
   ~StradeShareDB();
 
-  base_logic::MysqlThreadPool& MysqlEngine() {
+  base_logic::MysqlEngine& MysqlEngine() {
     return *mysql_engine_;
   }
 
  public:
   // 载入股票基本数据
-  bool FetchStockBasicInfo();
+  bool FetchAllStockList(std::vector<strade_logic::StockTotalInfo>& stock_vec);
 
-  // 载入股票历史数据
-  bool FetchStockHistInfo(const std::string& stock_code);
+  bool FetchStockHistList(const std::string& stock_code,
+                          std::vector<strade_logic::StockHistInfo>& stock_hist_vec);
 
- private:
-  static void OnFetchStockBasicInfoCallback(
-      base_logic::DictionaryValue* dict, void* param);
-
-  static void OnFetchStockHistInfoCallback(
-      base_logic::DictionaryValue* dict, void* param);
-
-  void AppendStringValue(base_logic::ListValue* list,
-                         const std::string& value) {
-    list->Append(list->CreateStringValue(value));
+  template<typename T>
+  bool QueryTemplateSync(base_logic::MYSQL_JOB_TYPE type,
+                         const std::string& sql,
+                         std::vector<T>& result) {
+    return mysql_engine_->QuerySync<T>(type, sql, result);
   }
 
  public:
   SSEngineImpl* engine_impl_;
 
  private:
-  base_logic::MysqlThreadPool* mysql_engine_;
+  base_logic::MysqlEngine* mysql_engine_;
 };
 
 } /* namespace strade_share */

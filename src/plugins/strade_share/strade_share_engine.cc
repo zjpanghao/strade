@@ -60,19 +60,17 @@ void SSEngineImpl::DetachObserver(strade_logic::Observer* observer) {
 
 void SSEngineImpl::LoadAllStockBasicInfo() {
   base_logic::WLockGd lk(lock_);
-  mysql_engine_->FetchStockBasicInfo();
-}
-
-void SSEngineImpl::OnLoadAllStockBasicInfo(
-    std::list<strade_logic::StockTotalInfo>& list) {
-  base_logic::WLockGd lk(lock_);
-  std::list<strade_logic::StockTotalInfo>::iterator iter(list.begin());
-  for (; iter != list.end(); ++iter) {
+  std::vector<strade_logic::StockTotalInfo> stock_vec;
+  mysql_engine_->FetchAllStockList(stock_vec);
+  std::vector<strade_logic::StockTotalInfo>::iterator iter(stock_vec.begin());
+  for (; iter != stock_vec.end(); ++iter) {
     strade_logic::StockTotalInfo& stock_total_info = (*iter);
+    std::vector<strade_logic::StockHistInfo> stock_hist_vec;
+    mysql_engine_->FetchStockHistList(
+        stock_total_info.GetStockCode(), stock_hist_vec);
+    stock_total_info.AddStockHistVec(stock_hist_vec);
     AddStockTotalInfoNonblock(stock_total_info);
-    mysql_engine_->FetchStockHistInfo(stock_total_info.GetStockCode());
   }
-  LOG_DEBUG2("Load all stock total_num: %d", list.size());
 }
 
 void SSEngineImpl::UpdateStockRealMarketData(

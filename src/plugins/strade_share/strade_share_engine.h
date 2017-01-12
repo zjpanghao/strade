@@ -117,8 +117,6 @@ class SSEngineImpl : public SSEngine, public strade_logic::Subject{
 
   void LoadAllStockBasicInfo();
 
-  void OnLoadAllStockBasicInfo(std::list<strade_logic::StockTotalInfo>& list);
-
   virtual void UpdateStockRealMarketData(
       REAL_MARKET_DATA_VEC& stocks_market_data);
 
