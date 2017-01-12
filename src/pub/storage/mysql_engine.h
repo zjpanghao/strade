@@ -108,13 +108,12 @@ struct MySqlJobAdapter {
     bool r = false;
     base_storage::DBStorageEngine* engine =
         shared_info->popEngine(type_);
+    if (NULL == engine) {
+      LOG_DEBUG2("excute sql=%s error, engine NULL",
+                 sql_.c_str());
+      return false;
+    }
     do {
-      if (NULL == engine) {
-        r = false;
-        LOG_DEBUG2("excute sql=%s error, engine NULL",
-                   sql_.c_str());
-        break;
-      }
       r = engine->SQLExec(sql_.c_str());
       if (!r) {
         r = false;
