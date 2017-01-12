@@ -130,10 +130,7 @@ void StockTotalInfo::Deserialize() {
   GetReal(2, data_->outstanding_);
   GetReal(3, data_->bvps_);
   GetReal(4, data_->pb_);
-
   data_->market_value_ = data_->outstanding_ * data_->bvps_ * data_->pb_;
-  LOG_DEBUG2("stock_code=%s, outstanding=%.2f",
-             data_->code_.c_str(), data_->outstanding_);
 }
 
 void StockTotalInfo::ClearRealMap() {

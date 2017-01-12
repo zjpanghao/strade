@@ -34,8 +34,8 @@ StradeShareDB::~StradeShareDB() {
 
 bool StradeShareDB::FetchAllStockList(std::vector<StockTotalInfo>& stock_vec) {
   static const std::string& SQL =
-      "SELECT `code`, `name`, `outstanding`, `bvps`, `pb` FROM `stock_basic_data`;";
-  return mysql_engine_->QuerySync<StockTotalInfo>(base_logic::MYSQL_READ, SQL, stock_vec);
+      "SELECT `code`, `name`, `totalAssets`, `bvps`, `pb` FROM `stock_basic_data`;";
+  return mysql_engine_->ReadData<StockTotalInfo>(SQL, stock_vec);
 }
 
 bool StradeShareDB::FetchStockHistList(const std::string& stock_code,
@@ -43,8 +43,22 @@ bool StradeShareDB::FetchStockHistList(const std::string& stock_code,
   static const std::string SQL =
       "SELECT date, open, high, close, low, qfq_close FROM stock_hist_data WHERE CODE = '"
           + stock_code + "' ORDER BY DATE DESC LIMIT 60;";
-  return mysql_engine_->QuerySync<StockHistInfo>(base_logic::MYSQL_READ, SQL, stock_hist_vec);
-
+  bool r = mysql_engine_->ReadData<StockHistInfo>(SQL, stock_hist_vec);
+  if(r) {
+    LOG_DEBUG2("stock_code=%s, load stock_hist_data size=%d",
+               stock_code.c_str(), stock_hist_vec.size());
+  }
+  return r;
 }
+
+bool StradeShareDB::ReadDataRows(const std::string& sql,
+                                 std::vector<MYSQL_ROW>& rows_vec) {
+  return mysql_engine_->ReadDataRows(sql, rows_vec);
+}
+
+bool StradeShareDB::WriteData(const std::string& sql) {
+  return mysql_engine_->WriteData(sql);
+}
+
 
 } /* namespace strade_share */

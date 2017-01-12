@@ -14,7 +14,7 @@ namespace strade_share {
 
 SSEngineImpl* SSEngineImpl::instance_ = NULL;
 SSEngineImpl::SSEngineImpl() {
-  if (!Init()) {
+  if (!InitParam()) {
     LOG_ERROR("StradeShareEngineImpl Init error");
     assert(0);
   }
@@ -28,6 +28,12 @@ SSEngineImpl* SSEngineImpl::GetInstance() {
 }
 
 bool SSEngineImpl::Init() {
+
+  return true;
+}
+
+
+bool SSEngineImpl::InitParam() {
   InitThreadrw(&lock_);
   bool r = false;
   std::string path = DEFAULT_CONFIG_PATH;
@@ -44,15 +50,16 @@ bool SSEngineImpl::Init() {
   return true;
 }
 
+
 void SSEngineImpl::AttachObserver(strade_logic::Observer* observer) {
-  if(NULL != observer) {
+  if (NULL != observer) {
     base_logic::WLockGd lk(lock_);
     this->Attach(observer);
   }
 }
 
 void SSEngineImpl::DetachObserver(strade_logic::Observer* observer) {
-  if(NULL != observer) {
+  if (NULL != observer) {
     base_logic::WLockGd lk(lock_);
     this->Detach(observer);
   }
@@ -62,6 +69,7 @@ void SSEngineImpl::LoadAllStockBasicInfo() {
   base_logic::WLockGd lk(lock_);
   std::vector<strade_logic::StockTotalInfo> stock_vec;
   mysql_engine_->FetchAllStockList(stock_vec);
+  LOG_DEBUG2("LoadAllStockBasicInfo size=%d", stock_vec.size());
   std::vector<strade_logic::StockTotalInfo>::iterator iter(stock_vec.begin());
   for (; iter != stock_vec.end(); ++iter) {
     strade_logic::StockTotalInfo& stock_total_info = (*iter);
@@ -227,6 +235,17 @@ bool SSEngineImpl::GetStockRealMarketDataByTime(
     return false;
   }
   return stock_total_info->GetStockRealInfoByTradeTime(time, &stock_real_info);
+}
+
+bool SSEngineImpl::ReadDataRows(
+    const std::string& sql, std::vector<MYSQL_ROW>& rows_vec) {
+  base_logic::WLockGd lk(lock_);
+  return mysql_engine_->ReadDataRows(sql, rows_vec);
+}
+
+bool SSEngineImpl::WriteData(const std::string& sql) {
+  base_logic::WLockGd lk(lock_);
+  return mysql_engine_->WriteData(sql);
 }
 
 } /* namespace strade_share */

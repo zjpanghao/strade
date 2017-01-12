@@ -69,4 +69,16 @@ bool MysqlEngine::CreateMysqlWriteEnginePool(int32 pool_num) {
   return true;
 }
 
+bool MysqlEngine::WriteData(const std::string& sql) {
+  MySqlJobAdapter mysql_job(base_logic::MYSQL_WRITE, sql);
+  mysql_job.WriteData(&shared_info_);
+  return false;
+}
+
+bool MysqlEngine::ReadDataRows(const std::string& sql,
+                               std::vector<MYSQL_ROW>& rows_vec) {
+  MySqlJobAdapter mysql_job(base_logic::MYSQL_READ, sql);
+  return mysql_job.ReadDataRows(&shared_info_, rows_vec);
+}
+
 } /* namespace base_logic */

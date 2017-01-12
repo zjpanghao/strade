@@ -96,10 +96,18 @@ class SSEngine {
       const time_t& time,
       strade_logic::StockRealInfo* stock_real_info) = 0;
 
+  // 获取mysql结果集对象， T 类型必须继承自 AbstractDao 类
   template<typename T>
-  bool QueryExcuteSync(base_logic::MYSQL_JOB_TYPE type,
-                       const std::string& sql,
-                       std::vector<T>& result) {}
+  bool ReadData(const std::string& sql,
+                std::vector<T>& result) {}
+
+  // 获取mysql 结果集， 用于自定义 MYSQL_ROW 的转化
+  virtual bool ReadDataRows(
+      const std::string& sql, std::vector<MYSQL_ROW>& rows_vec) = 0;
+
+  // 更新数据
+  virtual bool WriteData(const std::string& sql) = 0;
+
 };
 
 struct StradeShareCache {
@@ -174,12 +182,16 @@ class SSEngineImpl : public SSEngine, public strade_logic::Subject {
       const strade_logic::StockTotalInfo& stock_total_info);
 
   template<typename T>
-  bool QueryExcuteSync(base_logic::MYSQL_JOB_TYPE type,
-                       const std::string& sql,
-                       std::vector<T>& result) {
+  bool ReadData(const std::string& sql,
+                std::vector<T>& result) {
     base_logic::WLockGd lk(lock_);
-    return mysql_engine_->QuerySyncTemplate<T>(type, sql, result);
+    return mysql_engine_->ReadData<T>(sql, result);
   }
+
+  virtual bool ReadDataRows(
+      const std::string& sql, std::vector<MYSQL_ROW>& rows_vec);
+
+  virtual bool WriteData(const std::string& sql);
 
  private:
   bool GetStockTotalNonBlock(const std::string stock_code,
@@ -191,6 +203,8 @@ class SSEngineImpl : public SSEngine, public strade_logic::Subject {
     }
     return false;
   }
+
+  bool InitParam();
 
  private:
   threadrw_t* lock_;

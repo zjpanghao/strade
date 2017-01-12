@@ -103,8 +103,8 @@ struct MySqlJobAdapter {
   }
 
   template<class T>
-  bool ExcuteSync(MysqlEngineSharedInfo* shared_info,
-                  std::vector<T>& result) {
+  bool ReadData(MysqlEngineSharedInfo* shared_info,
+                std::vector<T>& result) {
     bool r = false;
     base_storage::DBStorageEngine* engine =
         shared_info->popEngine(type_);
@@ -136,6 +136,60 @@ struct MySqlJobAdapter {
     return r;
   }
 
+  bool ReadDataRows(MysqlEngineSharedInfo* shared_info,
+                    std::vector<MYSQL_ROW>& rows_vec) {
+    bool r = false;
+    base_storage::DBStorageEngine* engine =
+        shared_info->popEngine(type_);
+    if (NULL == engine) {
+      LOG_DEBUG2("excute sql=%s error, engine NULL",
+                 sql_.c_str());
+      return false;
+    }
+    do {
+      r = engine->SQLExec(sql_.c_str());
+      if (!r) {
+        r = false;
+        LOG_ERROR("exec sql error");
+        break;
+      }
+      MYSQL_ROW rows;
+      int32 num = engine->RecordCount();
+      if (engine->RecordCount() > 0) {
+        while ((rows = (*(MYSQL_ROW*) (engine->FetchRows())->proc))) {
+          rows_vec.push_back(rows);
+        }
+      }
+      r = true;
+    } while (0);
+    // 归还链接
+    shared_info->pushEngine(type_, engine);
+    return r;
+  }
+
+  bool WriteData(MysqlEngineSharedInfo* shared_info) {
+    bool r = false;
+    base_storage::DBStorageEngine* engine =
+        shared_info->popEngine(type_);
+    if (NULL == engine) {
+      LOG_DEBUG2("excute sql=%s error, engine NULL",
+                 sql_.c_str());
+      return false;
+    }
+    do {
+      r = engine->SQLExec(sql_.c_str());
+      if (!r) {
+        r = false;
+        LOG_ERROR("exec sql error");
+        break;
+      }
+      r = true;
+    } while (0);
+    // 归还链接
+    shared_info->pushEngine(type_, engine);
+    return r;
+  }
+
   std::string sql_;
   MYSQL_JOB_TYPE type_;
 };
@@ -155,13 +209,20 @@ class MysqlEngine {
   bool CreateMysqlWriteEnginePool(int32 pool_num = 1);
 
  public:
+  // 获取对象
   template<class T>
-  bool QuerySync(MYSQL_JOB_TYPE type,
-                 const std::string& sql,
-                 std::vector<T>& result) {
-    MySqlJobAdapter mysql_job(type, sql);
-    return mysql_job.ExcuteSync<T>(&shared_info_, result);
+  bool ReadData(const std::string& sql,
+                std::vector<T>& result) {
+    MySqlJobAdapter mysql_job(base_logic::MYSQL_READ, sql);
+    return mysql_job.ReadData<T>(&shared_info_, result);
   }
+
+  // 获取原始 MYSQL_ROW， 用于特殊处理
+  bool ReadDataRows(const std::string& sql,
+                        std::vector<MYSQL_ROW>& rows_vec);
+
+  // 更新数据
+  bool WriteData(const std::string& sql);
 
  private:
   base::ConnAddr read_addr_;

@@ -46,7 +46,6 @@ bool AbstractDao::GetString(int32 index, std::string& out) {
 }
 
 bool AbstractDao::GetString(std::string& out) {
-
   out = PopColumnValue();
   if (out.empty()) {
     return false;
