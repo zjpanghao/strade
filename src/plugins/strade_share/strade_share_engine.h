@@ -97,9 +97,9 @@ class SSEngine {
       strade_logic::StockRealInfo* stock_real_info) = 0;
 
   template<typename T>
-  virtual bool QueryExcuteSync(base_logic::MYSQL_JOB_TYPE type,
-                               const std::string& sql,
-                               std::vector<T>& result) = 0;
+  bool QueryExcuteSync(base_logic::MYSQL_JOB_TYPE type,
+                       const std::string& sql,
+                       std::vector<T>& result) {}
 };
 
 struct StradeShareCache {
@@ -173,10 +173,10 @@ class SSEngineImpl : public SSEngine, public strade_logic::Subject {
   bool AddStockTotalInfoBlock(
       const strade_logic::StockTotalInfo& stock_total_info);
 
-  template <typename T>
-  virtual bool QueryExcuteSync(base_logic::MYSQL_JOB_TYPE type,
-                               const std::string& sql,
-                               std::vector<T>& result) {
+  template<typename T>
+  bool QueryExcuteSync(base_logic::MYSQL_JOB_TYPE type,
+                       const std::string& sql,
+                       std::vector<T>& result) {
     base_logic::WLockGd lk(lock_);
     return mysql_engine_->QuerySyncTemplate<T>(type, sql, result);
   }

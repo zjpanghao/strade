@@ -39,7 +39,7 @@ bool SSEngineImpl::Init() {
   if (!r) {
     return false;
   }
-  mysql_engine_ = new StradeShareDB(config, this);
+  mysql_engine_ = new StradeShareDB(config);
   LoadAllStockBasicInfo();
   return true;
 }
@@ -177,17 +177,22 @@ const STOCK_REAL_MAP& SSEngineImpl::GetStockRealInfoMap(
 }
 
 STOCKS_MAP SSEngineImpl::GetAllStockTotalMapCopy() {
-  return const_cast<STOCKS_MAP>(GetAllStockTotalMap());
+  base_logic::RLockGd lk(lock_);
+  return share_cache_.stocks_map_;
 }
 
 STOCK_HIST_MAP SSEngineImpl::GetStockHistMapByCodeCopy(
     const std::string& stock_code) {
-  return const_cast<STOCK_HIST_MAP>(GetStockHistMap(stock_code));
+  const STOCK_HIST_MAP& stock_hist_map =
+      GetStockHistMap(stock_code);
+  return stock_hist_map;
 }
 
 STOCK_REAL_MAP SSEngineImpl::GetStockRealInfoMapCopy(
     const std::string& stock_code) {
-  return const_cast<STOCK_REAL_MAP>(GetStockRealInfoMap(stock_code));
+  const STOCK_REAL_MAP& stock_real_map =
+      GetStockRealInfoMap(stock_code);
+  return stock_real_map;
 }
 
 bool SSEngineImpl::GetStockTotalInfoByCode(
