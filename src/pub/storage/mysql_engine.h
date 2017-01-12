@@ -27,18 +27,9 @@ enum MYSQL_JOB_TYPE {
   MYSQL_STORAGE = 3,
 };
 
-// mysql 异步回调函数
-template<class T>
-struct ResultType {
-  typedef void (* MYSQL_DELEGATE)(std::vector<T>& result);
-};
-
 typedef std::list<base_storage::DBStorageEngine*> MYSQL_ENGINE_POOL;
 
 namespace {
-
-class MySqlJobAdapter;
-typedef std::queue<MySqlJobAdapter*> MYSQL_TASK_QUEUE;
 
 struct MysqlEngineSharedInfo {
   MysqlEngineSharedInfo() {

@@ -30,7 +30,7 @@ class StradeShareDB {
                           std::vector<strade_logic::StockHistInfo>& stock_hist_vec);
 
   template<typename T>
-  bool QueryTemplateSync(base_logic::MYSQL_JOB_TYPE type,
+  bool QuerySyncTemplate(base_logic::MYSQL_JOB_TYPE type,
                          const std::string& sql,
                          std::vector<T>& result) {
     return mysql_engine_->QuerySync<T>(type, sql, result);
