@@ -13,6 +13,9 @@
 
 namespace base_logic {
 
+/*
+ * 所有 Mysql 数据库结果集对象基类
+ * */
 class AbstractDao {
  public:
   AbstractDao();
@@ -29,7 +32,7 @@ class AbstractDao {
   bool GetString(std::string& out);
 
  private:
-  // 获取结果集， Get 的顺序必须与查询的顺序一致
+  // 获取结果集， GetXXX 的顺序必须与查询的顺序一致
   virtual void Deserialize() = 0;
   std::string PopColumnValue();
 

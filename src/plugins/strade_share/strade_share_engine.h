@@ -71,12 +71,12 @@ class SSEngine {
   virtual const STOCK_REAL_MAP& GetStockRealInfoMap(
       const std::string& stock_code) = 0;
 
-  virtual STOCKS_MAP& GetAllStockTotalMapNonConst() = 0;
+  virtual STOCKS_MAP GetAllStockTotalMapCopy() = 0;
 
-  virtual STOCK_HIST_MAP& GetStockHistMapByCodeNonConst(
+  virtual STOCK_HIST_MAP GetStockHistMapByCodeCopy(
       const std::string& stock_code) = 0;
 
-  virtual STOCK_REAL_MAP& GetStockRealInfoMapNonConst(
+  virtual STOCK_REAL_MAP GetStockRealInfoMapCopy(
       const std::string& stock_code) = 0;
 
   // 获取某只股票所有数据
@@ -144,12 +144,12 @@ class SSEngineImpl : public SSEngine, public strade_logic::Subject {
   virtual const STOCK_REAL_MAP& GetStockRealInfoMap(
       const std::string& stock_code);
 
-  virtual STOCKS_MAP& GetAllStockTotalMapNonConst();
+  virtual STOCKS_MAP GetAllStockTotalMapCopy();
 
-  virtual STOCK_HIST_MAP& GetStockHistMapByCodeNonConst(
+  virtual STOCK_HIST_MAP GetStockHistMapByCodeCopy(
       const std::string& stock_code);
 
-  virtual STOCK_REAL_MAP& GetStockRealInfoMapNonConst(
+  virtual STOCK_REAL_MAP GetStockRealInfoMapCopy(
       const std::string& stock_code);
 
   virtual bool GetStockTotalInfoByCode(

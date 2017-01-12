@@ -176,18 +176,18 @@ const STOCK_REAL_MAP& SSEngineImpl::GetStockRealInfoMap(
   return STOCK_REAL_MAP();
 }
 
-STOCKS_MAP& SSEngineImpl::GetAllStockTotalMapNonConst() {
-  return const_cast<STOCKS_MAP&>(GetAllStockTotalMap());
+STOCKS_MAP SSEngineImpl::GetAllStockTotalMapCopy() {
+  return const_cast<STOCKS_MAP>(GetAllStockTotalMap());
 }
 
-STOCK_HIST_MAP& SSEngineImpl::GetStockHistMapByCodeNonConst(
+STOCK_HIST_MAP SSEngineImpl::GetStockHistMapByCodeCopy(
     const std::string& stock_code) {
-  return const_cast<STOCK_HIST_MAP&>(GetStockHistMap(stock_code));
+  return const_cast<STOCK_HIST_MAP>(GetStockHistMap(stock_code));
 }
 
-STOCK_REAL_MAP& SSEngineImpl::GetStockRealInfoMapNonConst(
+STOCK_REAL_MAP SSEngineImpl::GetStockRealInfoMapCopy(
     const std::string& stock_code) {
-  return const_cast<STOCK_REAL_MAP&>(GetStockRealInfoMap(stock_code));
+  return const_cast<STOCK_REAL_MAP>(GetStockRealInfoMap(stock_code));
 }
 
 bool SSEngineImpl::GetStockTotalInfoByCode(
