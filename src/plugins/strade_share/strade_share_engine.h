@@ -95,13 +95,18 @@ class SSEngine {
       const std::string& stock_code,
       const time_t& time,
       strade_logic::StockRealInfo* stock_real_info) = 0;
+
+  template<typename T>
+  virtual bool QueryExcuteSync(base_logic::MYSQL_JOB_TYPE type,
+                               const std::string& sql,
+                               std::vector<T>& result) = 0;
 };
 
 struct StradeShareCache {
   STOCKS_MAP stocks_map_;
 };
 
-class SSEngineImpl : public SSEngine, public strade_logic::Subject{
+class SSEngineImpl : public SSEngine, public strade_logic::Subject {
  public:
   SSEngineImpl();
   virtual ~SSEngineImpl() {}
@@ -137,7 +142,7 @@ class SSEngineImpl : public SSEngine, public strade_logic::Subject{
       const std::string& stock_code);
 
   virtual const STOCK_REAL_MAP& GetStockRealInfoMap(
-      const std::string& stock_code) ;
+      const std::string& stock_code);
 
   virtual STOCKS_MAP& GetAllStockTotalMapNonConst();
 
@@ -168,11 +173,19 @@ class SSEngineImpl : public SSEngine, public strade_logic::Subject{
   bool AddStockTotalInfoBlock(
       const strade_logic::StockTotalInfo& stock_total_info);
 
+  template <typename T>
+  virtual bool QueryExcuteSync(base_logic::MYSQL_JOB_TYPE type,
+                               const std::string& sql,
+                               std::vector<T>& result) {
+    base_logic::WLockGd lk(lock_);
+    return mysql_engine_->QuerySyncTemplate<T>(type, sql, result);
+  }
+
  private:
   bool GetStockTotalNonBlock(const std::string stock_code,
                              strade_logic::StockTotalInfo** stock_total_info) {
     STOCKS_MAP::iterator iter(share_cache_.stocks_map_.find(stock_code));
-    if(iter != share_cache_.stocks_map_.end()) {
+    if (iter != share_cache_.stocks_map_.end()) {
       *stock_total_info = &(iter->second);
       return true;
     }

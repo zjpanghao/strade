@@ -100,17 +100,19 @@ struct MySqlJobAdapter {
                   const std::string& sql)
       : type_(type),
         sql_(sql) {
-
   }
 
   template<class T>
-  bool ExcuteSync(MysqlEngineSharedInfo* shared_info, std::vector<T>& result) {
+  bool ExcuteSync(MysqlEngineSharedInfo* shared_info,
+                  std::vector<T>& result) {
     bool r = false;
-    base_storage::DBStorageEngine* engine = shared_info->popEngine(type_);
+    base_storage::DBStorageEngine* engine =
+        shared_info->popEngine(type_);
     do {
       if (NULL == engine) {
         r = false;
-        LOG_DEBUG2("excute sql=%s error, engine NULL", sql_.c_str());
+        LOG_DEBUG2("excute sql=%s error, engine NULL",
+                   sql_.c_str());
         break;
       }
       r = engine->SQLExec(sql_.c_str());

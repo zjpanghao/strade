@@ -223,5 +223,4 @@ bool SSEngineImpl::GetStockRealMarketDataByTime(
   return stock_total_info->GetStockRealInfoByTradeTime(time, &stock_real_info);
 }
 
-
 } /* namespace strade_share */

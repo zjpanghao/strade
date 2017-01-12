@@ -11,16 +11,10 @@
 
 namespace strade_share {
 
-class SSEngineImpl;
 class StradeShareDB {
  public:
-  StradeShareDB(config::FileConfig* config,
-                SSEngineImpl* engine);
+  StradeShareDB(config::FileConfig* config);
   ~StradeShareDB();
-
-  base_logic::MysqlEngine& MysqlEngine() {
-    return *mysql_engine_;
-  }
 
  public:
   // 载入股票基本数据
@@ -35,10 +29,6 @@ class StradeShareDB {
                          std::vector<T>& result) {
     return mysql_engine_->QuerySync<T>(type, sql, result);
   }
-
- public:
-  SSEngineImpl* engine_impl_;
-
  private:
   base_logic::MysqlEngine* mysql_engine_;
 };

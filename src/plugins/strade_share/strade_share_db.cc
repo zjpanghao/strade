@@ -11,9 +11,8 @@ using namespace strade_logic;
 
 namespace strade_share {
 
-StradeShareDB::StradeShareDB(config::FileConfig* config,
-                             SSEngineImpl* engine)
-    : engine_impl_(engine) {
+StradeShareDB::StradeShareDB(
+    config::FileConfig* config) {
 
   assert(config->mysql_db_list_.size() >= 2);
 
