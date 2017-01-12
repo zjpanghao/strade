@@ -7,7 +7,7 @@
 
 #include "logic/base_values.h"
 #include "logic/logic_comm.h"
-#include "storage/mysql_thread_pool.h"
+#include "storage/mysql_engine.h"
 
 namespace strade_logic {
 
@@ -24,8 +24,6 @@ class StockRealInfo {
   StockRealInfo(const StockRealInfo& rhs);
   StockRealInfo& operator=(const StockRealInfo& rhs);
   ~StockRealInfo();
-
-  void Deserialize(base_logic::DictionaryValue& dict);
 
   time_t GetTradeTime() const {
     return data_->trade_time_;
@@ -78,14 +76,14 @@ class StockRealInfo {
 };
 
 // 历史数据
-class StockHistInfo {
+class StockHistInfo : public base_logic::AbstractDao{
  public:
   StockHistInfo();
   StockHistInfo(const StockHistInfo& rhs);
   StockHistInfo& operator=(const StockHistInfo& rhs);
   ~StockHistInfo();
 
-  void Deserialize(base_logic::DictionaryValue& dict);
+  virtual void Deserialize();
 
   const std::string& GetHistDate() const {
     return data_->date_;
@@ -132,77 +130,14 @@ class StockHistInfo {
   Data* data_;
 };
 
-// 基本数据
-class StockBasicInfo {
- public:
-  StockBasicInfo();
-  StockBasicInfo(const StockBasicInfo& rhs);
-  StockBasicInfo& operator=(const StockBasicInfo& rhs);
-  ~StockBasicInfo();
-
-  void Deserialize(base_logic::DictionaryValue& dict);
-
- private:
-  class Data {
-   public:
-    Data()
-        : code_(""),
-          refcount_(1) {
-
-    }
-    void AddRef() {
-      __sync_fetch_and_add(&refcount_, 1);
-    }
-    void Release() {
-      __sync_fetch_and_sub(&refcount_, 1);
-      if (!refcount_)
-        delete this;
-    }
-
-   public:
-    std::string code_;                                    //股票代码
-    std::string name_;                                    //股票名称
-    std::string industry_;                                //行业
-    double volume_;                                       //成交量
-    double chengjiaoe_;                                   //成交额
-    double change_percent_;                               //涨跌幅,收益率
-    std::string area_;                                    //地区
-    double pe_;                                           //市盈率
-    double outstanding_;                                  //流通股本
-    double totals_;                                       //总股本
-    double totalAssets_;                                  //总资产(万)
-    double liquidAssets_;                                 //流动资产
-    double fixedAssets_;                                  //固定资产
-    double reserved_;                                     //公积金
-    double reservedPerShare_;                             //每股公积金
-    double eps_;                                          //每股收益
-    double bvps_;                                         //每股净资
-    double pb_;                                           //市净率
-    double market_value_;                                 //总市值
-    double liquidMarketValue_;                            //流通市值
-    double liquidScale_;                                  //流通比例
-    std::string timeToMarket_;                            //上市日期
-    double amplitude_;                                    //振幅
-    double turnoverratio_;                                //换手率
-    double current_trade_;                                //股价
-
-   private:
-    int refcount_;
-  };
-
- private:
-  Data* data_;
-};
-
-class StockTotalInfo {
+class StockTotalInfo : public base_logic::AbstractDao {
  public:
   StockTotalInfo();
   StockTotalInfo(const StockTotalInfo& rhs);
   StockTotalInfo& operator=(const StockTotalInfo& rhs);
   ~StockTotalInfo();
 
-  void DeserializeStockBasicInfo(
-      base_logic::DictionaryValue& dict);
+  virtual void Deserialize();
 
   void ClearRealMap();
 
@@ -253,8 +188,32 @@ class StockTotalInfo {
     }
 
    public:
-    std::string code_;
-    StockBasicInfo stock_basic_info_;
+    std::string code_;                                    //股票代码
+    std::string name_;                                    //股票名称
+    std::string industry_;                                //行业
+    double volume_;                                       //成交量
+    double chengjiaoe_;                                   //成交额
+    double change_percent_;                               //涨跌幅,收益率
+    std::string area_;                                    //地区
+    double pe_;                                           //市盈率
+    double outstanding_;                                  //流通股本
+    double totals_;                                       //总股本
+    double totalAssets_;                                  //总资产(万)
+    double liquidAssets_;                                 //流动资产
+    double fixedAssets_;                                  //固定资产
+    double reserved_;                                     //公积金
+    double reservedPerShare_;                             //每股公积金
+    double eps_;                                          //每股收益
+    double bvps_;                                         //每股净资
+    double pb_;                                           //市净率
+    double market_value_;                                 //总市值
+    double liquidMarketValue_;                            //流通市值
+    double liquidScale_;                                  //流通比例
+    std::string timeToMarket_;                            //上市日期
+    double amplitude_;                                    //振幅
+    double turnoverratio_;                                //换手率
+    double current_trade_;                                //股价
+
     STOCK_HIST_MAP stock_hist_map_;
     STOCK_REAL_MAP stock_real_map_;
 
