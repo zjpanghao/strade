@@ -137,11 +137,11 @@ void StockTotalInfo::ClearRealMap() {
   data_->stock_real_map_.clear();
 }
 
-const STOCK_HIST_MAP& StockTotalInfo::GetStockHistMap() const {
+STOCK_HIST_MAP StockTotalInfo::GetStockHistMap() const {
   return data_->stock_hist_map_;
 }
 
-const STOCK_REAL_MAP& StockTotalInfo::GetStockRealMap() const {
+STOCK_REAL_MAP StockTotalInfo::GetStockRealMap() const {
   return data_->stock_real_map_;
 }
 

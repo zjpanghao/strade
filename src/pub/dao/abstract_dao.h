@@ -19,6 +19,7 @@ namespace base_logic {
 class AbstractDao {
  public:
   AbstractDao();
+  virtual ~AbstractDao();
   bool operator()(MYSQL_ROW& row);
 
  protected:

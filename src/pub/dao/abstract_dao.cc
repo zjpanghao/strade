@@ -12,6 +12,10 @@ AbstractDao::AbstractDao()
 
 }
 
+AbstractDao::~AbstractDao() {
+
+}
+
 bool AbstractDao::GetInteger(int32 index, int32& out) {
   curr_index_ = index;
   return GetInteger(out);
@@ -76,6 +80,7 @@ std::string AbstractDao::PopColumnValue() {
 //             old_index, temp.c_str());
   return temp;
 }
+
 
 
 } /* namespace base_logic */

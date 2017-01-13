@@ -13,7 +13,7 @@ namespace strade_logic {
 class Observer {
  public:
   Observer();
-  ~Observer();
+  virtual ~Observer();
   virtual void Init();
   virtual void Update(int opcode) = 0;
 };
