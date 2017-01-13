@@ -10,7 +10,7 @@
 
 # Where to find user code.
 
-LIB_DIR = ./../../../../library
+LIB_DIR = ./../../../library
 USER_DIR = ./../../pub
 SO_DIR = ./../../bin/plugins
 STOCKSVC = ./../../plugins
@@ -119,9 +119,9 @@ radom_in.o:$(THIRD_PATH)/basic/radom_in.cc
 
 
 $(PLUGIN) : candlestick_init.o candlestick_logic.o  \
-http_data.o http_packet.o mig_log.o basictypes.o error_comm.o tools.o \
-logic_basic_info.o logic_unit.o basic_util.o config.o tools.o tea.o \
-base_config.o mysql_db_pool.o \
+http_data.o http_packet.o mig_log.o basictypes.o error_comm.o  \
+logic_unit.o basic_util.o config.o  \
+  \
 basic_util.o \
 md5sum.o radom_in.o \
 $(CUSTOM_THIRD_PATH)/dmg_fp/lib/dmg_fp.a $(LIB_DIR)/base/lib/mybase.a $(LIB_DIR)/third_party/lib/libhiredis.a

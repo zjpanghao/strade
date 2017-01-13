@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include "core/common.h"
 #include "core/plugins.h"
-#include "net/comm_struct.h"
 #include "candlestick/candlestick_logic.h"
 
 struct Candleplugin {

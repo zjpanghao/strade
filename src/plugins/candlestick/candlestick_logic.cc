@@ -72,7 +72,7 @@ bool CandleStickLogic::OnCandleStickMessage(struct server *srv,
     LOG_DEBUG2("http_str:%s", http_str.c_str());
     if (NULL == value) {
       error_code = STRUCT_ERROR;
-      send_error(error_code, socket);
+      // send_error(error_code, socket);
       r = true;
       break;
     }
@@ -144,7 +144,7 @@ bool CandleStickLogic::OnSingleStockRecords(struct server *srv,
   if (!r) {
     err = -1;
     LOG_ERROR("OnSingleCandle error");
-    send_error(err, socket, 0, "");
+    // send_error(err, socket, 0, "");
   }
   stock_code = stock_code.substr(0, 6);
   LOG_MSG2("stockcodes %s\n", stock_code.c_str());
@@ -152,13 +152,13 @@ bool CandleStickLogic::OnSingleStockRecords(struct server *srv,
   if (!r || record_type > 2 || record_type < 0) {
     err = -1;
     LOG_ERROR("OnSingleCandle error");
-    send_error(err, socket, 0, "");
+    // send_error(err, socket, 0, "");
   }
   SendCandleStickHistoryProtocol candle_pro;
   std::list<SingleStockInfo> ll;
   STOCK_HISTORY_MAP history_map;
-  strade_logic::STOCK_HIST_MAP hist_map = GetStradeShareEngine()
-      ->GetStockHistMapByCodeCopy();
+  strade_share::STOCK_HIST_MAP hist_map = GetStradeShareEngine()
+      ->GetStockHistMapByCodeCopy(stock_code);
   GetStockData(hist_map, &history_map);
   StockHistoryType type = static_cast<StockHistoryType>(record_type);
   SingleStockCandleStickData::GetInstance()->LoadSingleStockHisData(

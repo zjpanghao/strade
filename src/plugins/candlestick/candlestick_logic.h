@@ -6,10 +6,9 @@
 #include <string>
 #include "core/common.h"
 #include "net/http_data.h"
-namespace strade_share {
-class STOCK_HIST_MAP;
-}
-
+#include "candlestick/src/candlestick_data.h"
+#include "strade_share/strade_share_engine.h"
+#include "logic/strade_basic_info.h"
 namespace candlestick {
 class CandleStickLogic {
  public:
@@ -39,8 +38,7 @@ class CandleStickLogic {
   bool Init();
   bool OnSingleStockRecords(struct server *srv, const int socket,
                             NetBase* netbase, const void* msg, const int len);
-  bool GetStockData(const strade_share::STOCK_HIST_MAP &share_map,
-                    STOCK_HISTORY_MAP *history_map);
+  bool GetStockData(const strade_share::STOCK_HIST_MAP &share_map, STOCK_HISTORY_MAP *history_map);
 };
 
 }  // namespace candlestock
