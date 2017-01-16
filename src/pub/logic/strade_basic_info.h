@@ -151,7 +151,7 @@ class StockTotalInfo : public base_logic::AbstractDao {
   bool AddStockHistVec(std::vector<StockHistInfo>& stock_hist_vec);
 
   bool GetStockHistInfoByDate(
-      const std::string& date, StockHistInfo** stock_hist_info);
+      const std::string& date, StockHistInfo& stock_hist_info);
 
   bool ReplaceStockHistInfo(
       const std::string& date, const StockHistInfo& stock_hist_info);
@@ -160,12 +160,12 @@ class StockTotalInfo : public base_logic::AbstractDao {
       const time_t trade_time, const StockRealInfo& stock_real_info);
 
   bool GetStockRealInfoByTradeTime(
-      const time_t trade_time, StockRealInfo** stock_real_info);
+      const time_t trade_time, StockRealInfo& stock_real_info);
 
   bool ReplaceStockRealInfo(
       const time_t trade_time, const StockRealInfo& stock_real_info);
 
-  StockRealInfo* GetCurrRealMarketInfo();
+  bool GetCurrRealMarketInfo(StockRealInfo& stock_real_info);
 
  public:
   const std::string& GetStockCode() const {
