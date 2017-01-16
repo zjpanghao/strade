@@ -81,4 +81,10 @@ bool MysqlEngine::ReadDataRows(const std::string& sql,
   return mysql_job.ReadDataRows(&shared_info_, rows_vec);
 }
 
+bool MysqlEngine::ExcuteStorage(const std::string& sql,
+                                std::vector<MYSQL_ROW>& rows_vec) {
+  MySqlJobAdapter mysql_job(base_logic::MYSQL_STORAGE, sql);
+  return mysql_job.ReadDataRows(&shared_info_, rows_vec);
+}
+
 } /* namespace base_logic */

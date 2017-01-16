@@ -21,7 +21,7 @@ SSEngineImpl::SSEngineImpl() {
 }
 
 SSEngineImpl::~SSEngineImpl() {
-  if(NULL != mysql_engine_) {
+  if (NULL != mysql_engine_) {
     delete mysql_engine_;
     mysql_engine_ = NULL;
   }
@@ -217,6 +217,17 @@ bool SSEngineImpl::GetStockRealMarketDataByTime(
   return stock_total_info->GetStockRealInfoByTradeTime(time, &stock_real_info);
 }
 
+strade_logic::StockRealInfo* SSEngineImpl::GetStockCurrRealMarketInfo(
+    const std::string& stock_code) {
+  base_logic::RLockGd lk(lock_);
+  strade_logic::StockTotalInfo* stock_total_info = NULL;
+  GetStockTotalNonBlock(stock_code, &stock_total_info);
+  if (NULL == stock_total_info) {
+    return NULL;
+  }
+  return stock_total_info->GetCurrRealMarketInfo();
+}
+
 bool SSEngineImpl::ReadDataRows(
     const std::string& sql, std::vector<MYSQL_ROW>& rows_vec) {
   base_logic::WLockGd lk(lock_);
@@ -226,6 +237,11 @@ bool SSEngineImpl::ReadDataRows(
 bool SSEngineImpl::WriteData(const std::string& sql) {
   base_logic::WLockGd lk(lock_);
   return mysql_engine_->WriteData(sql);
+}
+
+bool SSEngineImpl::ExcuteStorage(
+    const std::string& sql, std::vector<MYSQL_ROW>& rows_vec) {
+  return mysql_engine_->ExcuteStorage(sql, rows_vec);
 }
 
 } /* namespace strade_share */

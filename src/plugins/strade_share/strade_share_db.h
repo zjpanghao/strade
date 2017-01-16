@@ -34,6 +34,12 @@ class StradeShareDB {
 
   bool WriteData(const std::string& sql);
 
+  // 执行存储过程
+  bool ExcuteStorage(const std::string& sql,
+                     std::vector<MYSQL_ROW>& rows_vec) {
+    return mysql_engine_->ExcuteStorage(sql, rows_vec);
+  }
+
  private:
   base_logic::MysqlEngine* mysql_engine_;
 };

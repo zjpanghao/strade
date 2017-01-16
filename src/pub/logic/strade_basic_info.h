@@ -165,6 +165,8 @@ class StockTotalInfo : public base_logic::AbstractDao {
   bool ReplaceStockRealInfo(
       const time_t trade_time, const StockRealInfo& stock_real_info);
 
+  StockRealInfo* GetCurrRealMarketInfo();
+
  public:
   const std::string& GetStockCode() const {
     return data_->code_;

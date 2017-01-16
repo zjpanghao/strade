@@ -81,6 +81,10 @@ class SSEngine {
       const time_t& time,
       strade_logic::StockRealInfo* stock_real_info) = 0;
 
+  // 获取某只股票当前最新的实时数据
+  virtual strade_logic::StockRealInfo* GetStockCurrRealMarketInfo(
+      const std::string& stock_code) = 0;
+
   // 获取mysql结果集对象， T 类型必须继承自 pub/dao/AbstractDao 类
   template<typename T>
   bool ReadData(const std::string& sql,
@@ -94,6 +98,10 @@ class SSEngine {
 
   // 更新数据
   virtual bool WriteData(const std::string& sql) = 0;
+
+  // 执行存储过程
+  virtual bool ExcuteStorage(
+      const std::string& sql, std::vector<MYSQL_ROW>& rows_vec) = 0;
 
 };
 
@@ -151,6 +159,9 @@ class SSEngineImpl : public SSEngine, public strade_logic::Subject {
       const time_t& time,
       strade_logic::StockRealInfo* stock_real_info);
 
+  virtual strade_logic::StockRealInfo* GetStockCurrRealMarketInfo(
+      const std::string& stock_code);
+
  public:
   bool AddStockTotalInfoNonblock(
       const strade_logic::StockTotalInfo& stock_total_info);
@@ -169,6 +180,8 @@ class SSEngineImpl : public SSEngine, public strade_logic::Subject {
       const std::string& sql, std::vector<MYSQL_ROW>& rows_vec);
 
   virtual bool WriteData(const std::string& sql);
+
+  virtual bool ExcuteStorage(const std::string& sql, std::vector<MYSQL_ROW>& rows_vec);
 
  private:
   bool GetStockTotalNonBlock(const std::string stock_code,

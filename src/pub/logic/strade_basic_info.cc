@@ -209,4 +209,13 @@ bool StockTotalInfo::ReplaceStockRealInfo(
   return true;
 }
 
+StockRealInfo* StockTotalInfo::GetCurrRealMarketInfo() {
+  if (data_->stock_real_map_.empty()) {
+    return NULL;
+  }
+  STOCK_REAL_MAP::reverse_iterator iter(
+      data_->stock_real_map_.rbegin());
+  return &iter->second;
+}
+
 } /* namespace strade_logic */
