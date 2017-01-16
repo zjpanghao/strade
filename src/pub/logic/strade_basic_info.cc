@@ -137,11 +137,11 @@ void StockTotalInfo::ClearRealMap() {
   data_->stock_real_map_.clear();
 }
 
-const STOCK_HIST_MAP& StockTotalInfo::GetStockHistMap() const {
+STOCK_HIST_MAP StockTotalInfo::GetStockHistMap() const {
   return data_->stock_hist_map_;
 }
 
-const STOCK_REAL_MAP& StockTotalInfo::GetStockRealMap() const {
+STOCK_REAL_MAP StockTotalInfo::GetStockRealMap() const {
   return data_->stock_real_map_;
 }
 
@@ -207,6 +207,15 @@ bool StockTotalInfo::ReplaceStockRealInfo(
     const time_t trade_time, const StockRealInfo& stock_real_info) {
   data_->stock_real_map_[trade_time] = stock_real_info;
   return true;
+}
+
+StockRealInfo* StockTotalInfo::GetCurrRealMarketInfo() {
+  if (data_->stock_real_map_.empty()) {
+    return NULL;
+  }
+  STOCK_REAL_MAP::reverse_iterator iter(
+      data_->stock_real_map_.rbegin());
+  return &iter->second;
 }
 
 } /* namespace strade_logic */

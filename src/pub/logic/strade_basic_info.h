@@ -83,11 +83,13 @@ class StockHistInfo : public base_logic::AbstractDao{
   StockHistInfo& operator=(const StockHistInfo& rhs);
   ~StockHistInfo();
 
-  virtual void Deserialize();
-
   const std::string& GetHistDate() const {
     return data_->date_;
   }
+
+ private:
+  virtual void Deserialize();
+
  private:
   class Data {
    public:
@@ -137,13 +139,11 @@ class StockTotalInfo : public base_logic::AbstractDao {
   StockTotalInfo& operator=(const StockTotalInfo& rhs);
   ~StockTotalInfo();
 
-  virtual void Deserialize();
-
   void ClearRealMap();
 
-  const STOCK_HIST_MAP& GetStockHistMap() const;
+  STOCK_HIST_MAP GetStockHistMap() const;
 
-  const STOCK_REAL_MAP& GetStockRealMap() const;
+  STOCK_REAL_MAP GetStockRealMap() const;
 
   bool AddStockHistInfoByDate(
       const std::string& date, const StockHistInfo& stock_hist_info);
@@ -165,10 +165,15 @@ class StockTotalInfo : public base_logic::AbstractDao {
   bool ReplaceStockRealInfo(
       const time_t trade_time, const StockRealInfo& stock_real_info);
 
+  StockRealInfo* GetCurrRealMarketInfo();
+
  public:
   const std::string& GetStockCode() const {
     return data_->code_;
   }
+
+ private:
+  virtual void Deserialize();
 
  private:
   class Data {

@@ -224,6 +224,10 @@ class MysqlEngine {
   // 更新数据
   bool WriteData(const std::string& sql);
 
+  // 执行存储过程
+  bool ExcuteStorage(const std::string& sql,
+                     std::vector<MYSQL_ROW>& rows_vec);
+
  private:
   base::ConnAddr read_addr_;
   base::ConnAddr write_addr_;

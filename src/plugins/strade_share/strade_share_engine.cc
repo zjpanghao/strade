@@ -20,6 +20,14 @@ SSEngineImpl::SSEngineImpl() {
   }
 }
 
+SSEngineImpl::~SSEngineImpl() {
+  if (NULL != mysql_engine_) {
+    delete mysql_engine_;
+    mysql_engine_ = NULL;
+  }
+  DeinitThreadrw(lock_);
+}
+
 SSEngineImpl* SSEngineImpl::GetInstance() {
   if (NULL == instance_) {
     instance_ = new SSEngineImpl();
@@ -31,7 +39,6 @@ bool SSEngineImpl::Init() {
 
   return true;
 }
-
 
 bool SSEngineImpl::InitParam() {
   InitThreadrw(&lock_);
@@ -50,18 +57,10 @@ bool SSEngineImpl::InitParam() {
   return true;
 }
 
-
 void SSEngineImpl::AttachObserver(strade_logic::Observer* observer) {
   if (NULL != observer) {
     base_logic::WLockGd lk(lock_);
     this->Attach(observer);
-  }
-}
-
-void SSEngineImpl::DetachObserver(strade_logic::Observer* observer) {
-  if (NULL != observer) {
-    base_logic::WLockGd lk(lock_);
-    this->Detach(observer);
   }
 }
 
@@ -158,12 +157,12 @@ bool SSEngineImpl::AddStockTotalInfoBlock(
   return true;
 }
 
-const STOCKS_MAP& SSEngineImpl::GetAllStockTotalMap() {
+STOCKS_MAP SSEngineImpl::GetAllStockTotalMapCopy() {
   base_logic::RLockGd lk(lock_);
   return share_cache_.stocks_map_;
 }
 
-const STOCK_HIST_MAP& SSEngineImpl::GetStockHistMap(
+STOCK_HIST_MAP SSEngineImpl::GetStockHistMapByCodeCopy(
     const std::string& stock_code) {
   base_logic::RLockGd lk(lock_);
   strade_logic::StockTotalInfo* stock_total_info = NULL;
@@ -174,7 +173,7 @@ const STOCK_HIST_MAP& SSEngineImpl::GetStockHistMap(
   return STOCK_HIST_MAP();
 }
 
-const STOCK_REAL_MAP& SSEngineImpl::GetStockRealInfoMap(
+STOCK_REAL_MAP SSEngineImpl::GetStockRealInfoMapCopy(
     const std::string& stock_code) {
   base_logic::RLockGd lk(lock_);
   strade_logic::StockTotalInfo* stock_total_info = NULL;
@@ -183,25 +182,6 @@ const STOCK_REAL_MAP& SSEngineImpl::GetStockRealInfoMap(
     return stock_total_info->GetStockRealMap();
   }
   return STOCK_REAL_MAP();
-}
-
-STOCKS_MAP SSEngineImpl::GetAllStockTotalMapCopy() {
-  base_logic::RLockGd lk(lock_);
-  return share_cache_.stocks_map_;
-}
-
-STOCK_HIST_MAP SSEngineImpl::GetStockHistMapByCodeCopy(
-    const std::string& stock_code) {
-  const STOCK_HIST_MAP& stock_hist_map =
-      GetStockHistMap(stock_code);
-  return stock_hist_map;
-}
-
-STOCK_REAL_MAP SSEngineImpl::GetStockRealInfoMapCopy(
-    const std::string& stock_code) {
-  const STOCK_REAL_MAP& stock_real_map =
-      GetStockRealInfoMap(stock_code);
-  return stock_real_map;
 }
 
 bool SSEngineImpl::GetStockTotalInfoByCode(
@@ -237,6 +217,17 @@ bool SSEngineImpl::GetStockRealMarketDataByTime(
   return stock_total_info->GetStockRealInfoByTradeTime(time, &stock_real_info);
 }
 
+strade_logic::StockRealInfo* SSEngineImpl::GetStockCurrRealMarketInfo(
+    const std::string& stock_code) {
+  base_logic::RLockGd lk(lock_);
+  strade_logic::StockTotalInfo* stock_total_info = NULL;
+  GetStockTotalNonBlock(stock_code, &stock_total_info);
+  if (NULL == stock_total_info) {
+    return NULL;
+  }
+  return stock_total_info->GetCurrRealMarketInfo();
+}
+
 bool SSEngineImpl::ReadDataRows(
     const std::string& sql, std::vector<MYSQL_ROW>& rows_vec) {
   base_logic::WLockGd lk(lock_);
@@ -246,6 +237,11 @@ bool SSEngineImpl::ReadDataRows(
 bool SSEngineImpl::WriteData(const std::string& sql) {
   base_logic::WLockGd lk(lock_);
   return mysql_engine_->WriteData(sql);
+}
+
+bool SSEngineImpl::ExcuteStorage(
+    const std::string& sql, std::vector<MYSQL_ROW>& rows_vec) {
+  return mysql_engine_->ExcuteStorage(sql, rows_vec);
 }
 
 } /* namespace strade_share */

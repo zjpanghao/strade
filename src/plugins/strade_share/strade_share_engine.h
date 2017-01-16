@@ -38,10 +38,6 @@ class SSEngine {
   virtual void AttachObserver(
       strade_logic::Observer* observer) = 0;
 
-  // 解绑观察者
-  virtual void DetachObserver(
-      strade_logic::Observer* observer) = 0;
-
   // 更新实时行情数据
   virtual void UpdateStockRealMarketData(
       REAL_MARKET_DATA_VEC& stocks_market_data) = 0;
@@ -59,17 +55,6 @@ class SSEngine {
   virtual bool UpdateStockHistDataVec(
       const std::string& stock_code,
       STOCK_HIST_DATA_VEC& stock_vec) = 0;
-
-  // 获取所有股票接口 只读
-  virtual const STOCKS_MAP& GetAllStockTotalMap() = 0;
-
-  // 获取某只股票所有历史数据 只读
-  virtual const STOCK_HIST_MAP& GetStockHistMap(
-      const std::string& stock_code) = 0;
-
-  // 获取某只股票所有实时数据 只读
-  virtual const STOCK_REAL_MAP& GetStockRealInfoMap(
-      const std::string& stock_code) = 0;
 
   virtual STOCKS_MAP GetAllStockTotalMapCopy() = 0;
 
@@ -96,10 +81,16 @@ class SSEngine {
       const time_t& time,
       strade_logic::StockRealInfo* stock_real_info) = 0;
 
-  // 获取mysql结果集对象， T 类型必须继承自 AbstractDao 类
+  // 获取某只股票当前最新的实时数据
+  virtual strade_logic::StockRealInfo* GetStockCurrRealMarketInfo(
+      const std::string& stock_code) = 0;
+
+  // 获取mysql结果集对象， T 类型必须继承自 pub/dao/AbstractDao 类
   template<typename T>
   bool ReadData(const std::string& sql,
-                std::vector<T>& result) {}
+                std::vector<T>& result) {
+    return false;
+  }
 
   // 获取mysql 结果集， 用于自定义 MYSQL_ROW 的转化
   virtual bool ReadDataRows(
@@ -107,6 +98,10 @@ class SSEngine {
 
   // 更新数据
   virtual bool WriteData(const std::string& sql) = 0;
+
+  // 执行存储过程
+  virtual bool ExcuteStorage(
+      const std::string& sql, std::vector<MYSQL_ROW>& rows_vec) = 0;
 
 };
 
@@ -117,7 +112,7 @@ struct StradeShareCache {
 class SSEngineImpl : public SSEngine, public strade_logic::Subject {
  public:
   SSEngineImpl();
-  virtual ~SSEngineImpl() {}
+  virtual ~SSEngineImpl();
 
   static SSEngineImpl* GetInstance();
 
@@ -125,8 +120,6 @@ class SSEngineImpl : public SSEngine, public strade_logic::Subject {
 
   virtual void AttachObserver(
       strade_logic::Observer* observer);
-
-  virtual void DetachObserver(strade_logic::Observer* observer);
 
   void LoadAllStockBasicInfo();
 
@@ -143,14 +136,6 @@ class SSEngineImpl : public SSEngine, public strade_logic::Subject {
   virtual bool UpdateStockHistDataVec(
       const std::string& stock_code,
       STOCK_HIST_DATA_VEC& stock_vec);
-
-  virtual const STOCKS_MAP& GetAllStockTotalMap();
-
-  virtual const STOCK_HIST_MAP& GetStockHistMap(
-      const std::string& stock_code);
-
-  virtual const STOCK_REAL_MAP& GetStockRealInfoMap(
-      const std::string& stock_code);
 
   virtual STOCKS_MAP GetAllStockTotalMapCopy();
 
@@ -174,6 +159,9 @@ class SSEngineImpl : public SSEngine, public strade_logic::Subject {
       const time_t& time,
       strade_logic::StockRealInfo* stock_real_info);
 
+  virtual strade_logic::StockRealInfo* GetStockCurrRealMarketInfo(
+      const std::string& stock_code);
+
  public:
   bool AddStockTotalInfoNonblock(
       const strade_logic::StockTotalInfo& stock_total_info);
@@ -192,6 +180,8 @@ class SSEngineImpl : public SSEngine, public strade_logic::Subject {
       const std::string& sql, std::vector<MYSQL_ROW>& rows_vec);
 
   virtual bool WriteData(const std::string& sql);
+
+  virtual bool ExcuteStorage(const std::string& sql, std::vector<MYSQL_ROW>& rows_vec);
 
  private:
   bool GetStockTotalNonBlock(const std::string stock_code,
