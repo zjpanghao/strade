@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+#include <mysql.h>
+
 #include "macros.h"
 #include "user_defined_types.h"
 
@@ -14,9 +16,22 @@ namespace strade_user {
 
 class StockGroup {
  public:
+  enum Status {
+    INVALID,
+    VALID
+  };
+
+  static std::string GetUserGroupSql(UserId user_id);
+  static std::string GetGroupStockSql(GroupId group_id);
+  static GroupId CreateGroup(UserId user_id,
+                             const std::string& name);
+ public:
   StockGroup();
+  StockGroup(UserId user_id, GroupId id, const std::string& name);
   REFCOUNT_DECLARE(StockGroup);
  public:
+  bool Init(const MYSQL_ROW row);
+  bool InitStockList();
   bool AddStocks(StockCodeList& stocks);
   bool DelStocks(StockCodeList& stocks);
   StockCodeList stocks() const { return data_->stock_list_; }
@@ -35,11 +50,13 @@ class StockGroup {
    public:
     Data()
         : refcount_(1),
-          id_(0) {
+          id_(0),
+          user_id_(0) {
     }
 
    public:
     GroupId id_;
+    UserId user_id_;
     std::string name_;
     StockCodeList stock_list_;
     StockCodeSet stock_set_;
