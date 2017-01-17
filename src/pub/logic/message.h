@@ -23,24 +23,31 @@ namespace strade_user {
 typedef uint32 UserId;
 typedef uint32 GroupId;
 
-struct Head {
+struct ReqHead {
+  uint16 type;
   uint16 opcode;
   UserId user_id;
   std::string token;
 
-  Head()
-      : opcode(0),
+  ReqHead()
+      : type(0),
+        opcode(0),
         user_id(0) {}
-  virtual ~Head() {}
+  virtual ~ReqHead() {}
   bool StartDeserialize(DictionaryValue& dict);
   void StartDump(std::ostringstream& oss);
   virtual bool Deserialize(DictionaryValue& dict);
   virtual void Dump(std::ostringstream& oss);
 };
 
+struct ResHead {
+  virtual ~ResHead() { }
+  virtual bool Serialize(DictionaryValue& dict) = 0;
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // create stock group
-struct CreateGroupReq : Head {
+struct CreateGroupReq : ReqHead {
   const static uint32 ID = 101;
 
   std::string group_name;
@@ -49,14 +56,14 @@ struct CreateGroupReq : Head {
   void Dump(std::ostringstream& oss);
 };
 
-struct CreateGroupRes {
+struct CreateGroupRes : ResHead {
   GroupId group_id;
   bool Serialize(DictionaryValue& dict);
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 // add stock
-struct AddStockReq : Head {
+struct AddStockReq : ReqHead {
   const static uint32 ID = 102;
 
   GroupId group_id;
@@ -66,7 +73,7 @@ struct AddStockReq : Head {
 };
 
 // del stock
-struct DelStockReq : Head {
+struct DelStockReq : ReqHead {
   const static uint32 ID = 103;
 
   GroupId group_id;
@@ -77,14 +84,14 @@ struct DelStockReq : Head {
 };
 
 // query group
-struct QueryGroupReq : Head {
+struct QueryGroupReq : ReqHead {
   const static uint32 ID = 104;
 
   bool Deserialize(DictionaryValue& dict);
   void Dump(std::ostringstream& oss);
 };
 
-struct QueryGroupsRes {
+struct QueryGroupsRes : ResHead {
   struct GroupInfo {
     GroupId id;
     std::string name;
@@ -97,7 +104,7 @@ struct QueryGroupsRes {
 };
 
 // query stock
-struct QueryStocksReq : Head {
+struct QueryStocksReq : ReqHead {
   const static uint32 ID = 105;
 
   GroupId group_id;
@@ -105,7 +112,7 @@ struct QueryStocksReq : Head {
   void Dump(std::ostringstream& oss);
 };
 
-struct QueryStocksRes {
+struct QueryStocksRes : ResHead {
   struct StockInfo {
     std::string code;
     std::string name;
@@ -124,7 +131,7 @@ struct QueryStocksRes {
 };
 
 // query holding stocks
-struct QueryHoldingStocksReq : Head {
+struct QueryHoldingStocksReq : ReqHead {
   const static uint32 ID = 106;
 
   bool Deserialize(DictionaryValue& dict);
@@ -132,7 +139,7 @@ struct QueryHoldingStocksReq : Head {
 
 };
 
-struct QueryHoldingStocksRes {
+struct QueryHoldingStocksRes : ResHead {
   struct StockInfo {
     std::string code;
     uint32 holding;
@@ -152,16 +159,18 @@ struct QueryHoldingStocksRes {
 };
 
 // query today orders
-struct QueryTodayOrdersReq : Head {
+struct QueryTodayOrdersReq : ReqHead {
   const static uint32 ID = 107;
 
   bool Deserialize(DictionaryValue& dict);
   void Dump(std::ostringstream& oss);
 };
 
-struct QueryTodayOrdersRes {
+struct QueryTodayOrdersRes : ResHead {
   struct OrderInfo {
+    uint32 id;
     std::string code;
+    std::string name;
     OrderOperation op;
     double order_price;
     uint32 order_nums;
@@ -176,14 +185,14 @@ struct QueryTodayOrdersRes {
 };
 
 // query today finished orders
-struct QueryTodayFinishedOrdersReq : Head {
+struct QueryTodayFinishedOrdersReq : ReqHead {
   const static uint32 ID = 108;
 
   bool Deserialize(DictionaryValue& dict);
   void Dump(std::ostringstream& oss);
 };
 
-struct QueryTodayFinishedOrdersRes {
+struct QueryTodayFinishedOrdersRes : ResHead {
   struct OrderInfo {
     std::string code;
     OrderOperation op;
@@ -200,7 +209,7 @@ struct QueryTodayFinishedOrdersRes {
 };
 
 // query history finished orders
-struct QueryHistoryFinishedOrdersReq : Head {
+struct QueryHistoryFinishedOrdersReq : ReqHead {
   const static uint32 ID = 109;
 
   std::string begin_time;
@@ -210,7 +219,7 @@ struct QueryHistoryFinishedOrdersReq : Head {
   void Dump(std::ostringstream& oss);
 };
 
-struct QueryHistoryFinishedOrdersRes {
+struct QueryHistoryFinishedOrdersRes : ResHead {
   struct OrderInfo {
     std::string code;
     OrderOperation op;
@@ -227,7 +236,7 @@ struct QueryHistoryFinishedOrdersRes {
 };
 
 // query statement
-struct QueryStatementReq : Head {
+struct QueryStatementReq : ReqHead {
   const static uint32 ID = 110;
   std::string begin_time;
   std::string end_time;
@@ -236,7 +245,7 @@ struct QueryStatementReq : Head {
   void Dump(std::ostringstream& oss);
 };
 
-struct QueryStatementRes {
+struct QueryStatementRes : ResHead {
   struct StatementRecord {
     std::string code;
     OrderOperation op;
@@ -255,17 +264,77 @@ struct QueryStatementRes {
   bool Serialize(DictionaryValue& dict);
 };
 
-struct SubmitOrderReq : Head {
+///////////////////////////////////////////////////////////////////////////////
+
+struct SubmitOrderReq : ReqHead {
   const static uint32 ID = 111;
 
   GroupId group_id;
   std::string code;
   double order_price;
+  double expected_price;    // 止损或止盈价格
   uint32 order_nums;
   OrderOperation op;
 
   bool Deserialize(DictionaryValue& dict);
   void Dump(std::ostringstream& oss);
+};
+
+struct SubmitOrderRes : ResHead {
+
+};
+
+///////////////////////////////////////////////////////////////////////////////
+struct GroupStockHoldingReq : ReqHead {
+  const static uint32 ID = 112;
+  GroupId group_id;
+
+  bool Deserialize(DictionaryValue& dict);
+  void Dump(std::ostringstream& oss);
+};
+
+struct GroupStockHoldingRes : ResHead {
+  struct StockInfo {
+    std::string code;
+    std::string name;
+    uint32 holding;
+    bool Serialize(DictionaryValue& dict);
+  };
+  typedef std::vector<StockInfo> StockList;
+
+  StockList stock_list;
+  bool Serialize(DictionaryValue& dict);
+};
+
+///////////////////////////////////////////////////////////////////////////////
+struct AvailableStockCountReq : ReqHead {
+  const static uint32 ID = 113;
+
+  std::string code;
+
+  bool Deserialize(DictionaryValue& dict);
+  void Dump(std::ostringstream& oss);
+};
+
+struct AvailableStockCountRes : ResHead {
+  std::string code;
+  std::string name;
+  uint32 count;
+  bool Serialize(DictionaryValue& dict);
+};
+
+struct Status : ResHead {
+  enum State {
+    SUCCESS,
+    ERROR_MSG,
+    UNKNOWN_OPCODE,
+    USER_NOT_EXIST,
+    INVALID_TOKEN
+  };
+
+  State state;
+  std::string to_string();
+  bool Serialize(DictionaryValue& dict);
 };
 
 }
