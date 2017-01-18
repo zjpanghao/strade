@@ -91,14 +91,13 @@ void SSEngineImpl::UpdateStockRealMarketData(
       const strade_logic::StockRealInfo& stock_real_info = *iter;
       const std::string& stock_code = stock_real_info.GetStockCode();
       const time_t& trade_time = stock_real_info.GetTradeTime();
-      strade_logic::StockTotalInfo* stock_total_info = NULL;
-      GetStockTotalNonBlock(stock_code, &stock_total_info);
-      if (NULL == stock_total_info) {
+      strade_logic::StockTotalInfo stock_total_info;
+      if (!GetStockTotalNonBlock(stock_code, stock_total_info)) {
         LOG_ERROR2("UpdateStockRealMarketData stock_code=%s, not exists!!!!",
                    stock_code.c_str());
         continue;
       }
-      stock_total_info->AddStockRealInfoByTime(trade_time, stock_real_info);
+      stock_total_info.AddStockRealInfoByTime(trade_time, stock_real_info);
       ++total_count;
     }
     LOG_DEBUG2("UpdateStockRealMarketData total_count=%d, current_time=%d",
@@ -113,12 +112,11 @@ bool SSEngineImpl::UpdateStockHistInfoByDate(const std::string& stock_code,
                                              const std::string& date,
                                              strade_logic::StockHistInfo& stock_hist_info) {
   base_logic::WLockGd lk(lock_);
-  strade_logic::StockTotalInfo* stock_total_info = NULL;
-  GetStockTotalNonBlock(stock_code, &stock_total_info);
-  if (NULL != stock_total_info) {
-    return stock_total_info->AddStockHistInfoByDate(date, stock_hist_info);
+  strade_logic::StockTotalInfo stock_total_info;
+  if (!GetStockTotalNonBlock(stock_code, stock_total_info)) {
+    return false;
   }
-  return false;
+  return stock_total_info.AddStockHistInfoByDate(date, stock_hist_info);
 }
 
 bool SSEngineImpl::ClearOldRealTradeMap() {
@@ -134,12 +132,11 @@ bool SSEngineImpl::UpdateStockHistDataVec(
     const std::string& stock_code,
     STOCK_HIST_DATA_VEC& stock_vec) {
   base_logic::WLockGd lk(lock_);
-  strade_logic::StockTotalInfo* stock_total_info = NULL;
-  GetStockTotalNonBlock(stock_code, &stock_total_info);
-  if (NULL == stock_total_info) {
+  strade_logic::StockTotalInfo stock_total_info;
+  if (!GetStockTotalNonBlock(stock_code, stock_total_info)) {
     return false;
   }
-  stock_total_info->AddStockHistVec(stock_vec);
+  stock_total_info.AddStockHistVec(stock_vec);
   return true;
 }
 
@@ -165,67 +162,63 @@ STOCKS_MAP SSEngineImpl::GetAllStockTotalMapCopy() {
 STOCK_HIST_MAP SSEngineImpl::GetStockHistMapByCodeCopy(
     const std::string& stock_code) {
   base_logic::RLockGd lk(lock_);
-  strade_logic::StockTotalInfo* stock_total_info = NULL;
-  GetStockTotalNonBlock(stock_code, &stock_total_info);
-  if (NULL != stock_total_info) {
-    return stock_total_info->GetStockHistMap();
+  strade_logic::StockTotalInfo stock_total_info;
+  if (!GetStockTotalNonBlock(stock_code, stock_total_info)) {
+    return STOCK_HIST_MAP();
   }
-  return STOCK_HIST_MAP();
+  return stock_total_info.GetStockHistMap();
 }
 
 STOCK_REAL_MAP SSEngineImpl::GetStockRealInfoMapCopy(
     const std::string& stock_code) {
   base_logic::RLockGd lk(lock_);
-  strade_logic::StockTotalInfo* stock_total_info = NULL;
-  GetStockTotalNonBlock(stock_code, &stock_total_info);
-  if (NULL != stock_total_info) {
-    return stock_total_info->GetStockRealMap();
+  strade_logic::StockTotalInfo stock_total_info;
+  if (!GetStockTotalNonBlock(stock_code, stock_total_info)) {
+    return STOCK_REAL_MAP();
   }
-  return STOCK_REAL_MAP();
+  return stock_total_info.GetStockRealMap();
 }
 
 bool SSEngineImpl::GetStockTotalInfoByCode(
     const std::string& stock_code,
-    strade_logic::StockTotalInfo* stock_total_info) {
+    strade_logic::StockTotalInfo& stock_total_info) {
   base_logic::WLockGd lk(lock_);
-  GetStockTotalNonBlock(stock_code, &stock_total_info);
+  GetStockTotalNonBlock(stock_code, stock_total_info);
 }
 
 bool SSEngineImpl::GetStockHistInfoByDate(
     const std::string& stock_code,
     const std::string& date,
-    strade_logic::StockHistInfo* stock_hist_info) {
+    strade_logic::StockHistInfo& stock_hist_info) {
   base_logic::WLockGd lk(lock_);
-  strade_logic::StockTotalInfo* stock_total_info(NULL);
-  GetStockTotalNonBlock(stock_code, &stock_total_info);
-  if (NULL == stock_total_info) {
+  strade_logic::StockTotalInfo stock_total_info;
+  if (!GetStockTotalNonBlock(stock_code, stock_total_info)) {
     return false;
   }
-  return stock_total_info->GetStockHistInfoByDate(date, &stock_hist_info);
+  return stock_total_info.GetStockHistInfoByDate(date, stock_hist_info);
 }
 
 bool SSEngineImpl::GetStockRealMarketDataByTime(
     const std::string& stock_code,
     const time_t& time,
-    strade_logic::StockRealInfo* stock_real_info) {
+    strade_logic::StockRealInfo& stock_real_info) {
   base_logic::WLockGd lk(lock_);
-  strade_logic::StockTotalInfo* stock_total_info(NULL);
-  GetStockTotalNonBlock(stock_code, &stock_total_info);
-  if (NULL == stock_total_info) {
+  strade_logic::StockTotalInfo stock_total_info;
+  if (!GetStockTotalNonBlock(stock_code, stock_total_info)) {
     return false;
   }
-  return stock_total_info->GetStockRealInfoByTradeTime(time, &stock_real_info);
+  return stock_total_info.GetStockRealInfoByTradeTime(time, stock_real_info);
 }
 
-strade_logic::StockRealInfo* SSEngineImpl::GetStockCurrRealMarketInfo(
-    const std::string& stock_code) {
-  base_logic::RLockGd lk(lock_);
-  strade_logic::StockTotalInfo* stock_total_info = NULL;
-  GetStockTotalNonBlock(stock_code, &stock_total_info);
-  if (NULL == stock_total_info) {
-    return NULL;
+bool SSEngineImpl::GetStockCurrRealMarketInfo(
+    const std::string& stock_code,
+    strade_logic::StockRealInfo& stock_real_info) {
+  base_logic::WLockGd lk(lock_);
+  strade_logic::StockTotalInfo stock_total_info;
+  if (!GetStockTotalNonBlock(stock_code, stock_total_info)) {
+    return false;
   }
-  return stock_total_info->GetCurrRealMarketInfo();
+  return stock_total_info.GetCurrRealMarketInfo(stock_real_info);
 }
 
 bool SSEngineImpl::ReadDataRows(

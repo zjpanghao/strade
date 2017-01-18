@@ -67,23 +67,24 @@ class SSEngine {
   // 获取某只股票所有数据
   virtual bool GetStockTotalInfoByCode(
       const std::string& stock_code,
-      strade_logic::StockTotalInfo* stock_total_info) = 0;
+      strade_logic::StockTotalInfo& stock_total_info) = 0;
 
   // 获取某只股票，某个历史日期数据
   virtual bool GetStockHistInfoByDate(
       const std::string& stock_code,
       const std::string& date,
-      strade_logic::StockHistInfo* stock_hist_info) = 0;
+      strade_logic::StockHistInfo& stock_hist_info) = 0;
 
   // 获取某只股票，当天某个交易时间的实时数据
   virtual bool GetStockRealMarketDataByTime(
       const std::string& stock_code,
       const time_t& time,
-      strade_logic::StockRealInfo* stock_real_info) = 0;
+      strade_logic::StockRealInfo& stock_real_info) = 0;
 
   // 获取某只股票当前最新的实时数据
-  virtual strade_logic::StockRealInfo* GetStockCurrRealMarketInfo(
-      const std::string& stock_code) = 0;
+  virtual bool GetStockCurrRealMarketInfo(
+      const std::string& stock_code,
+      strade_logic::StockRealInfo& stock_real_info) = 0;
 
   // 获取mysql结果集对象， T 类型必须继承自 pub/dao/AbstractDao 类
   template<typename T>
@@ -147,20 +148,21 @@ class SSEngineImpl : public SSEngine, public strade_logic::Subject {
 
   virtual bool GetStockTotalInfoByCode(
       const std::string& stock_code,
-      strade_logic::StockTotalInfo* stock_total_info);
+      strade_logic::StockTotalInfo& stock_total_info);
 
   virtual bool GetStockHistInfoByDate(
       const std::string& stock_code,
       const std::string& date,
-      strade_logic::StockHistInfo* stock_hist_info);
+      strade_logic::StockHistInfo& stock_hist_info);
 
   virtual bool GetStockRealMarketDataByTime(
       const std::string& stock_code,
       const time_t& time,
-      strade_logic::StockRealInfo* stock_real_info);
+      strade_logic::StockRealInfo& stock_real_info);
 
-  virtual strade_logic::StockRealInfo* GetStockCurrRealMarketInfo(
-      const std::string& stock_code);
+  virtual bool GetStockCurrRealMarketInfo(
+      const std::string& stock_code,
+      strade_logic::StockRealInfo& stock_real_info);
 
  public:
   bool AddStockTotalInfoNonblock(
@@ -185,10 +187,10 @@ class SSEngineImpl : public SSEngine, public strade_logic::Subject {
 
  private:
   bool GetStockTotalNonBlock(const std::string stock_code,
-                             strade_logic::StockTotalInfo** stock_total_info) {
+                             strade_logic::StockTotalInfo& stock_total_info) {
     STOCKS_MAP::iterator iter(share_cache_.stocks_map_.find(stock_code));
     if (iter != share_cache_.stocks_map_.end()) {
-      *stock_total_info = &(iter->second);
+      stock_total_info = iter->second;
       return true;
     }
     return false;
