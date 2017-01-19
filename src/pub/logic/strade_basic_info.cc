@@ -168,10 +168,10 @@ bool StockTotalInfo::AddStockHistVec(
 }
 
 bool StockTotalInfo::GetStockHistInfoByDate(
-    const std::string& date, StockHistInfo** stock_hist_info) {
+    const std::string& date, StockHistInfo& stock_hist_info) {
   STOCK_HIST_MAP::iterator iter(data_->stock_hist_map_.find(date));
   if (iter != data_->stock_hist_map_.end()) {
-    *stock_hist_info = &(iter->second);
+    stock_hist_info = iter->second;
     return true;
   }
   return false;
@@ -194,10 +194,10 @@ bool StockTotalInfo::AddStockRealInfoByTime(
 }
 
 bool StockTotalInfo::GetStockRealInfoByTradeTime(
-    const time_t trade_time, StockRealInfo** stock_real_info) {
+    const time_t trade_time, StockRealInfo& stock_real_info) {
   STOCK_REAL_MAP::iterator iter(data_->stock_real_map_.find(trade_time));
   if (iter != data_->stock_real_map_.end()) {
-    *stock_real_info = &(iter->second);
+    stock_real_info = iter->second;
     return true;
   }
   return false;
@@ -209,13 +209,14 @@ bool StockTotalInfo::ReplaceStockRealInfo(
   return true;
 }
 
-StockRealInfo* StockTotalInfo::GetCurrRealMarketInfo() {
+bool StockTotalInfo::GetCurrRealMarketInfo(StockRealInfo& stock_real_info) {
   if (data_->stock_real_map_.empty()) {
-    return NULL;
+    return false;
   }
   STOCK_REAL_MAP::reverse_iterator iter(
       data_->stock_real_map_.rbegin());
-  return &iter->second;
+  stock_real_info = iter->second;
+  return true;
 }
 
 } /* namespace strade_logic */

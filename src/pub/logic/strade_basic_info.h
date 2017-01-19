@@ -92,6 +92,26 @@ class StockHistInfo : public base_logic::AbstractDao{
  private:
   virtual void Deserialize();
 
+ public:
+  const std::string& get_hist_date() const {
+    return data_->date_;
+  }
+  double get_open() const {
+    return data_->open_;
+  }
+  double get_high() const {
+    return data_->high_;
+  }
+  double get_low() const {
+    return data_->low_;
+  }
+  double get_day_yield() const {
+    return data_->day_yield_;
+  }
+  double get_mid_price() const {
+    return data_->mid_price_;
+  }
+
  private:
   class Data {
    public:
@@ -115,17 +135,12 @@ class StockHistInfo : public base_logic::AbstractDao{
     double high_;
     double close_;
     double low_;
-    double support_pos_;
-    double pressure_pos_;
+
     double mid_price_;
     double qfq_close_;
     double day_yield_;
-    double adjusted_day_yield_;
-    double month_init_price_;
     //(最高价-最低价)/昨日收盘价
     double day_volatility_;
-    double adjusted_day_volatility_;
-    int visit_num_;
 
    private:
     int refcount_;
@@ -153,7 +168,7 @@ class StockTotalInfo : public base_logic::AbstractDao {
   bool AddStockHistVec(std::vector<StockHistInfo>& stock_hist_vec);
 
   bool GetStockHistInfoByDate(
-      const std::string& date, StockHistInfo** stock_hist_info);
+      const std::string& date, StockHistInfo& stock_hist_info);
 
   bool ReplaceStockHistInfo(
       const std::string& date, const StockHistInfo& stock_hist_info);
@@ -162,16 +177,55 @@ class StockTotalInfo : public base_logic::AbstractDao {
       const time_t trade_time, const StockRealInfo& stock_real_info);
 
   bool GetStockRealInfoByTradeTime(
-      const time_t trade_time, StockRealInfo** stock_real_info);
+      const time_t trade_time, StockRealInfo& stock_real_info);
 
   bool ReplaceStockRealInfo(
       const time_t trade_time, const StockRealInfo& stock_real_info);
 
-  StockRealInfo* GetCurrRealMarketInfo();
+  bool GetCurrRealMarketInfo(StockRealInfo& stock_real_info);
 
  public:
-  const std::string& GetStockCode() const {
+  const std::string& get_stock_code() const {
     return data_->code_;
+  }
+  const std::string& get_stock_name() const {
+    return data_->name_;
+  }
+  const std::string& get_industry() const {
+    return data_->industry_;
+  }
+  double get_volume() const {
+    return data_->volume_;
+  }
+  double get_amount() const {
+    return data_->amount_;
+  }
+  double get_change_percent() const {
+    return data_->change_percent_;
+  }
+  const std::string& get_area() const {
+    return data_->area_;
+  }
+  double get_outstanding() const {
+    return data_->outstanding_;
+  }
+  double get_totals() const {
+    return data_->totals_;
+  }
+  double get_total_assets() const {
+    return data_->totalAssets_;
+  }
+  double get_market_value() const {
+    return data_->market_value_;
+  }
+  double get_turnoverratio() const {
+    return data_->turnoverratio_;
+  }
+  void set_visit_num(int32 visit_num) {
+    data_->visit_num_ = visit_num;
+  }
+  int32 get_visit_num() const {
+    return data_->visit_num_;
   }
 
  private:
@@ -199,7 +253,7 @@ class StockTotalInfo : public base_logic::AbstractDao {
     std::string name_;                                    //股票名称
     std::string industry_;                                //行业
     double volume_;                                       //成交量
-    double chengjiaoe_;                                   //成交额
+    double amount_;                                       //成交额
     double change_percent_;                               //涨跌幅,收益率
     std::string area_;                                    //地区
     double pe_;                                           //市盈率
@@ -220,6 +274,8 @@ class StockTotalInfo : public base_logic::AbstractDao {
     double amplitude_;                                    //振幅
     double turnoverratio_;                                //换手率
     double current_trade_;                                //股价
+
+    int32 visit_num_;                                     //当前访问量
 
     STOCK_HIST_MAP stock_hist_map_;
     STOCK_REAL_MAP stock_real_map_;

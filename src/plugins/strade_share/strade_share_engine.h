@@ -40,6 +40,7 @@ class SSEngine {
 
   // 更新实时行情数据
   virtual void UpdateStockRealMarketData(
+      time_t market_time,
       REAL_MARKET_DATA_VEC& stocks_market_data) = 0;
 
   // 更新股票当天历史数据
@@ -67,23 +68,24 @@ class SSEngine {
   // 获取某只股票所有数据
   virtual bool GetStockTotalInfoByCode(
       const std::string& stock_code,
-      strade_logic::StockTotalInfo* stock_total_info) = 0;
+      strade_logic::StockTotalInfo& stock_total_info) = 0;
 
   // 获取某只股票，某个历史日期数据
   virtual bool GetStockHistInfoByDate(
       const std::string& stock_code,
       const std::string& date,
-      strade_logic::StockHistInfo* stock_hist_info) = 0;
+      strade_logic::StockHistInfo& stock_hist_info) = 0;
 
   // 获取某只股票，当天某个交易时间的实时数据
   virtual bool GetStockRealMarketDataByTime(
       const std::string& stock_code,
       const time_t& time,
-      strade_logic::StockRealInfo* stock_real_info) = 0;
+      strade_logic::StockRealInfo& stock_real_info) = 0;
 
   // 获取某只股票当前最新的实时数据
-  virtual strade_logic::StockRealInfo* GetStockCurrRealMarketInfo(
-      const std::string& stock_code) = 0;
+  virtual bool GetStockCurrRealMarketInfo(
+      const std::string& stock_code,
+      strade_logic::StockRealInfo& stock_real_info) = 0;
 
   // 获取mysql结果集对象， T 类型必须继承自 pub/dao/AbstractDao 类
   template<typename T>
@@ -102,6 +104,14 @@ class SSEngine {
   // 执行存储过程
   virtual bool ExcuteStorage(
       const std::string& sql, std::vector<MYSQL_ROW>& rows_vec) = 0;
+
+  // 添加异步任务, type 表示读，写， 用于用不同的连接
+  virtual bool AddMysqlAsyncJob(const std::string& sql,
+                                base_logic::MysqlCallback callback,
+                                base_logic::MYSQL_JOB_TYPE type) = 0;
+
+  // 获取数据库连接
+  virtual base_logic::MysqlEngine* GetMysqlEngine() = 0;
 
 };
 
@@ -124,6 +134,7 @@ class SSEngineImpl : public SSEngine, public strade_logic::Subject {
   void LoadAllStockBasicInfo();
 
   virtual void UpdateStockRealMarketData(
+      time_t market_time,
       REAL_MARKET_DATA_VEC& stocks_market_data);
 
   virtual bool UpdateStockHistInfoByDate(
@@ -147,20 +158,21 @@ class SSEngineImpl : public SSEngine, public strade_logic::Subject {
 
   virtual bool GetStockTotalInfoByCode(
       const std::string& stock_code,
-      strade_logic::StockTotalInfo* stock_total_info);
+      strade_logic::StockTotalInfo& stock_total_info);
 
   virtual bool GetStockHistInfoByDate(
       const std::string& stock_code,
       const std::string& date,
-      strade_logic::StockHistInfo* stock_hist_info);
+      strade_logic::StockHistInfo& stock_hist_info);
 
   virtual bool GetStockRealMarketDataByTime(
       const std::string& stock_code,
       const time_t& time,
-      strade_logic::StockRealInfo* stock_real_info);
+      strade_logic::StockRealInfo& stock_real_info);
 
-  virtual strade_logic::StockRealInfo* GetStockCurrRealMarketInfo(
-      const std::string& stock_code);
+  virtual bool GetStockCurrRealMarketInfo(
+      const std::string& stock_code,
+      strade_logic::StockRealInfo& stock_real_info);
 
  public:
   bool AddStockTotalInfoNonblock(
@@ -173,7 +185,7 @@ class SSEngineImpl : public SSEngine, public strade_logic::Subject {
   bool ReadData(const std::string& sql,
                 std::vector<T>& result) {
     base_logic::WLockGd lk(lock_);
-    return mysql_engine_->ReadData<T>(sql, result);
+    return strade_share_db_->ReadData<T>(sql, result);
   }
 
   virtual bool ReadDataRows(
@@ -183,12 +195,18 @@ class SSEngineImpl : public SSEngine, public strade_logic::Subject {
 
   virtual bool ExcuteStorage(const std::string& sql, std::vector<MYSQL_ROW>& rows_vec);
 
+  virtual bool AddMysqlAsyncJob(const std::string& sql,
+                                base_logic::MysqlCallback callback,
+                                base_logic::MYSQL_JOB_TYPE type);
+
+  virtual base_logic::MysqlEngine* GetMysqlEngine();
+
  private:
   bool GetStockTotalNonBlock(const std::string stock_code,
-                             strade_logic::StockTotalInfo** stock_total_info) {
+                             strade_logic::StockTotalInfo& stock_total_info) {
     STOCKS_MAP::iterator iter(share_cache_.stocks_map_.find(stock_code));
     if (iter != share_cache_.stocks_map_.end()) {
-      *stock_total_info = &(iter->second);
+      stock_total_info = iter->second;
       return true;
     }
     return false;
@@ -199,7 +217,7 @@ class SSEngineImpl : public SSEngine, public strade_logic::Subject {
  private:
   threadrw_t* lock_;
   StradeShareCache share_cache_;
-  StradeShareDB* mysql_engine_;
+  StradeShareDB* strade_share_db_;
   static SSEngineImpl* instance_;
 };
 
