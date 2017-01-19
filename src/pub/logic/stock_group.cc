@@ -30,10 +30,10 @@ REFCOUNT_DEFINE(StockGroup)
 
 std::string StockGroup::GetUserGroupSql(UserId user_id) {
   std::ostringstream oss;
-  oss << "SELECT `groupId`, `groupName` "
+  oss << "SELECT `groupId`, `groupName`, `status`"
       "FROM `group_info` "
       "WHERE "
-      << "`userId` = " << user_id << " AND " << "`status` = 1";
+      << "`userId` = " << user_id << " AND " << "`status` != 0";
   return oss.str();
 }
 
@@ -45,11 +45,13 @@ std::string StockGroup::GetGroupStockSql(UserId group_id) {
 }
 
 GroupId StockGroup::CreateGroup(UserId user_id,
-                                const std::string& name) {
+                                const std::string& name,
+                                Status status) {
   std::ostringstream oss;
   oss << "CALL `proc_CreateStockGroup`("
       << user_id << ","
-      << "'" << name << "'" << ")";
+      << "'" << name << "'" << ","
+      << (int)status << ")";
 
   std::vector<MYSQL_ROW> row;
   SSEngine* engine = GetStradeShareEngine();
@@ -71,6 +73,9 @@ bool StockGroup::Init(const MYSQL_ROW row) {
   }
   if (NULL != row[1]) {
     data_->name_ = row[1];
+  }
+  if (NULL != row[2]) {
+    data_->status_ = (Status)atoi(row[2]);
   }
   return InitStockList();
 }
@@ -95,6 +100,7 @@ bool StockGroup::InitStockList() {
 }
 
 bool StockGroup::AddStocks(StockCodeList& stocks) {
+  bool rc = true;
   size_t n = stocks.size();
   StockCodeList s;
   for (size_t i = 0; i < stocks.size(); ++i) {
@@ -120,12 +126,13 @@ bool StockGroup::AddStocks(StockCodeList& stocks) {
 
   SSEngine* engine = GetStradeShareEngine();
   if (!engine->WriteData(sql)) {
+    rc = false;
     LOG_ERROR2("user:%d add stock to group:%s error",
                data_->user_id_, data_->name_.data());
   }
 
   stocks.swap(s);
-  return stocks.size() == n;
+  return rc;
 }
 
 

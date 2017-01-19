@@ -18,13 +18,15 @@ class StockGroup {
  public:
   enum Status {
     INVALID,
-    VALID
+    VALID,
+    DEFAULT
   };
 
   static std::string GetUserGroupSql(UserId user_id);
   static std::string GetGroupStockSql(GroupId group_id);
   static GroupId CreateGroup(UserId user_id,
-                             const std::string& name);
+                             const std::string& name,
+                             Status status = VALID);
  public:
   StockGroup();
   StockGroup(UserId user_id, GroupId id, const std::string& name);
@@ -45,19 +47,22 @@ class StockGroup {
 
   void set_name(const std::string& name) { data_->name_ = name; }
   std::string name() const { return data_->name_; }
+  Status status() const { return data_->status_; }
  public:
   class Data {
    public:
     Data()
         : refcount_(1),
           id_(0),
-          user_id_(0) {
+          user_id_(0),
+          status_(VALID) {
     }
 
    public:
     GroupId id_;
     UserId user_id_;
     std::string name_;
+    Status status_;
     StockCodeList stock_list_;
     StockCodeSet stock_set_;
 
