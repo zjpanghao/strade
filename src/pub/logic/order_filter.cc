@@ -36,4 +36,12 @@ bool OrderDealTimeFilter::filter(const OrderInfo& order) {
   return true;
 }
 
+bool OrderProfitFilter::filter(const OrderInfo& order) {
+  if (order.profit() >= min_
+      && order.profit() <= max_) {
+    return false;
+  }
+  return true;
+}
+
 } /* namespace strade_user */
