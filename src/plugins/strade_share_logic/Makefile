@@ -21,7 +21,7 @@ CUSTOM_THIRD_PATH = $(LIB_DIR)/third_party
 LINK_PATHS = -L./ -L/usr/local/libmemcached-1.0.7/lib/  -L/usr/local/lib -L/usr/lib64/mysql
 
 # Flags passed to the preprocessor.
-CPPFLAGS += -isystem -shared -fPIC -_DB_POOL_ -D_DB_POOL_ -D_DEBUG -DUSR_LOG_MSG -DPROCESS_WORK
+CPPFLAGS += -isystem -shared -fPIC -_DB_POOL_ -D_DB_POOL_ -D_DEBUG -DUSR_LOG_MSG -DPROCESS_WORK -DHEAD_SHORT
 
 # Flags passed to the C++ compiler.
 CXXFLAGS += -g  -Wextra -pthread -shared -fPIC
@@ -29,7 +29,7 @@ CXXFLAGS += -g  -Wextra -pthread -shared -fPIC
 
 # All tests produced by this Makefile.  Remember to add new tests you
 # created to the list.
-PLUGIN = $(SO_DIR)/strade_share/strade_share.so
+PLUGIN = $(SO_DIR)/plugins/strade_share_logic/stradeshare_logic.so
 
 INCLUDE_PATHS = -I/usr/local/libmemcached-1.0.7/include \
 				-I$(LIB_DIR)/BasicCore \
@@ -42,8 +42,6 @@ INCLUDE_PATHS = -I/usr/local/libmemcached-1.0.7/include \
 				-I$(LIB_DIR)\
 				-I$(LIB_DIR)/base\
 				-I../\
-
-
 
 # House-keeping build targets.
 
@@ -81,12 +79,14 @@ clean :
 # gtest_main.a, depending on whether it defines its own main()
 # function.
 
+strade_share_init.o : ./strade_share_init.cc ./strade_share_init.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./strade_share_init.cc $(INCLUDE_PATHS)
 
-strade_share_engine.o : ./strade_share_engine.cc ./strade_share_engine.h
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./strade_share_engine.cc $(INCLUDE_PATHS)
+strade_share_logic.o : ./strade_share_logic.cc ./strade_share_logic.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./strade_share_logic.cc $(INCLUDE_PATHS)
 
-strade_share_db.o :  ./strade_share_db.cc ./strade_share_db.h
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./strade_share_db.cc $(INCLUDE_PATHS)
+strade_share_timer.o : ./strade_share_timer.cc ./strade_share_timer.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./strade_share_timer.cc $(INCLUDE_PATHS)
 
 mysql_engine.o : $(USER_DIR)/storage/mysql_engine.cc $(USER_DIR)/storage/mysql_engine.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/storage/mysql_engine.cc $(INCLUDE_PATHS)
@@ -109,8 +109,14 @@ subject.o : $(USER_DIR)/logic/subject.cc $(USER_DIR)/logic/subject.h
 abstract_dao.o : $(USER_DIR)/dao/abstract_dao.cc $(USER_DIR)/dao/abstract_dao.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/dao/abstract_dao.cc $(INCLUDE_PATHS)
 
-$(PLUGIN) : basictypes.o config.o strade_share_engine.o strade_share_db.o strade_basic_info.o mysql_engine.o\
-	observer.o subject.o abstract_dao.o\
+native_library.o : $(THIRD_PATH)/basic/native_library.cc
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(THIRD_PATH)/basic/native_library.cc $(INCLUDE_PATHS)
+
+logic_unit.o : $(USER_DIR)/logic/logic_unit.cc $(USER_DIR)/logic/logic_unit.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/logic/logic_unit.cc $(INCLUDE_PATHS)
+
+$(PLUGIN) : strade_share_init.o strade_share_logic.o strade_share_timer.o basictypes.o config.o strade_basic_info.o mysql_engine.o\
+	observer.o subject.o abstract_dao.o native_library.o logic_unit.o\
 	$(CUSTOM_THIRD_PATH)/dmg_fp/lib/dmg_fp.a $(LIB_DIR)/base/lib/mybase.a $(LIB_DIR)/third_party/lib/libhiredis.a
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LINK_PATHS)  -lpthread -lexpat -lrt -ldl -lmysqlclient \
 	$^  -o $@ -lexpat -lmysqlclient
