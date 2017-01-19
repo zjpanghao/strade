@@ -57,6 +57,14 @@ void ReqHead::Dump(std::ostringstream& oss) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+bool ResHead::StartSerialize(DictionaryValue& dict) {
+  return ResHead::Serialize(dict) && Serialize(dict);
+}
+
+bool ResHead::Serialize(DictionaryValue& dict) {
+  return status.Serialize(dict);
+}
+///////////////////////////////////////////////////////////////////////////////
 bool CreateGroupReq::Deserialize(DictionaryValue& dict) {
   if (!dict.GetString(L"group_name", &group_name)) {
     LOG_ERROR("NOT FIND group_name");
@@ -435,6 +443,12 @@ void SubmitOrderReq::Dump(std::ostringstream& oss) {
   OSS_WRITE(order_nums);
   OSS_WRITE((int)op);
 }
+
+bool SubmitOrderRes::Serialize(DictionaryValue& dict) {
+  dict.SetBigInteger(L"order_id", order_id);
+  return true;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 bool GroupStockHoldingReq::Deserialize(DictionaryValue& dict) {
   int64 t;
@@ -488,8 +502,38 @@ bool AvailableStockCountRes::Serialize(DictionaryValue& dict) {
   dict.SetBigInteger(L"count", count);
   return true;
 }
+///////////////////////////////////////////////////////////////////////////////
+bool CancelOrderReq::Deserialize(DictionaryValue& dict) {
+  int64 t;
+  if (!dict.GetBigInteger(L"order_id", &t)) {
+    LOG_ERROR("NOT FIND order_id");
+    return false;
+  }
+  order_id = t;
+  return true;
+}
+
+void CancelOrderReq::Dump(std::ostringstream& oss) {
+  oss << "\t\t--------- CancelOrder ---------" << std::endl;
+  OSS_WRITE(order_id);
+}
 
 ///////////////////////////////////////////////////////////////////////////////
+bool ProfitAndLossOrderNumReq::Deserialize(DictionaryValue& dict) {
+  return true;
+}
+
+void ProfitAndLossOrderNumReq::Dump(std::ostringstream& oss) {
+  oss << "\t\t--------- ProfitAndLossOrderNumReq ---------" << std::endl;
+}
+
+bool ProfitAndLossOrderNumRes::Serialize(DictionaryValue& dict) {
+  dict.SetBigInteger(L"profit_num", profit_num);
+  dict.SetBigInteger(L"loss_num", loss_num);
+  return true;
+}
+///////////////////////////////////////////////////////////////////////////////
+
 std::string Status::to_string() {
   switch (state) {
     case SUCCESS:
@@ -509,9 +553,10 @@ std::string Status::to_string() {
 
 bool Status::Serialize(DictionaryValue& dict) {
   int64 t = state;
-  dict.SetBigInteger(L"err_code", t);
+  dict.SetBigInteger(L"status", t);
   dict.SetString(L"msg", to_string());
   return true;
 }
+
 }
 

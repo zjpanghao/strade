@@ -1,6 +1,9 @@
 //  Copyright (c) 2015-2015 The KID Authors. All rights reserved.
 //  Created on: 2017/1/9 Author: zjc
 
+#ifndef SRC_PUB_LOGIC_USER_MESSAGE_H_
+#define SRC_PUB_LOGIC_USER_MESSAGE_H_
+
 #include <string>
 #include <sstream>
 #include <vector>
@@ -40,9 +43,37 @@ struct ReqHead {
   virtual void Dump(std::ostringstream& oss);
 };
 
+struct Status {
+  enum State {
+    SUCCESS,
+    FAILED,
+    ERROR_MSG,
+    UNKNOWN_OPCODE,
+    USER_NOT_EXIST,
+    INVALID_TOKEN,
+    GROUP_NAME_ALREADAY_EXIST,
+    MYSQL_ERROR,
+    GROUP_NOT_EXIST,
+    STOCK_NOT_IN_GROUP,
+    STOCK_NOT_EXIST,
+    CAPITAL_NOT_ENOUGH,
+    NO_HOLDING_STOCK,
+    ORDER_NOT_EXIST
+  };
+
+  Status() : state(SUCCESS) { }
+  Status(State s)
+      : state(s) { }
+  State state;
+  std::string to_string();
+  bool Serialize(DictionaryValue& dict);
+};
+
 struct ResHead {
   virtual ~ResHead() { }
-  virtual bool Serialize(DictionaryValue& dict) = 0;
+  Status status;
+  bool StartSerialize(DictionaryValue& dict);
+  virtual bool Serialize(DictionaryValue& dict);
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -281,7 +312,9 @@ struct SubmitOrderReq : ReqHead {
 };
 
 struct SubmitOrderRes : ResHead {
+  OrderId order_id;
 
+  bool Serialize(DictionaryValue& dict);
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -323,20 +356,28 @@ struct AvailableStockCountRes : ResHead {
   bool Serialize(DictionaryValue& dict);
 };
 
-struct Status : ResHead {
-  enum State {
-    SUCCESS,
-    ERROR_MSG,
-    UNKNOWN_OPCODE,
-    USER_NOT_EXIST,
-    INVALID_TOKEN
-  };
+///////////////////////////////////////////////////////////////////////////////
+struct CancelOrderReq : ReqHead {
+  const static uint32 ID = 114;
 
-  State state;
-  std::string to_string();
+  OrderId order_id;
+  bool Deserialize(DictionaryValue& dict);
+  void Dump(std::ostringstream& oss);
+};
+
+struct ProfitAndLossOrderNumReq : ReqHead {
+  const static uint32 ID = 115;
+
+  bool Deserialize(DictionaryValue& dict);
+  void Dump(std::ostringstream& oss);
+};
+
+struct ProfitAndLossOrderNumRes : ResHead {
+  uint32 profit_num;
+  uint32 loss_num;
   bool Serialize(DictionaryValue& dict);
 };
 
 }
 
-
+#endif /* SRC_PUB_LOGIC_USER_MESSAGE_H_ */
