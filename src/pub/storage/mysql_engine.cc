@@ -15,12 +15,20 @@ MysqlEngine::MysqlEngine(
 }
 
 MysqlEngine::~MysqlEngine() {
-
+  pthread_join(mysql_thread_, NULL);
 }
 
 void MysqlEngine::Initialize() {
-  CreateMysqlReadEnginePool();
-  CreateMysqlWriteEnginePool();
+
+  CreateMysqlReadEnginePool(MYSQL_READ_ENGINE_NUM);
+  CreateMysqlWriteEnginePool(MYSQL_WRITE_ENGINE_NUM);
+
+  int ret = -1;
+  ret = pthread_create(&mysql_thread_, NULL, MysqlThread::Run, &shared_info_);
+  if(0 != ret) {
+    LOG_ERROR("mysql async thread create error");
+    assert(0);
+  }
 }
 
 bool MysqlEngine::CreateMysqlReadEnginePool(int32 pool_num) {
@@ -41,7 +49,7 @@ bool MysqlEngine::CreateMysqlReadEnginePool(int32 pool_num) {
       LOG_ERROR("db conntion error");
       assert(0);
     }
-    shared_info_.pushEngine(MYSQL_READ, read_engine);
+    shared_info_.PushEngine(MYSQL_READ, read_engine);
   }
   return true;
 }
@@ -64,7 +72,7 @@ bool MysqlEngine::CreateMysqlWriteEnginePool(int32 pool_num) {
       LOG_ERROR("db conntion error");
       assert(0);
     }
-    shared_info_.pushEngine(MYSQL_WRITE, write_engine);
+    shared_info_.PushEngine(MYSQL_WRITE, write_engine);
   }
   return true;
 }
@@ -85,6 +93,14 @@ bool MysqlEngine::ExcuteStorage(const std::string& sql,
                                 std::vector<MYSQL_ROW>& rows_vec) {
   MySqlJobAdapter mysql_job(base_logic::MYSQL_STORAGE, sql);
   return mysql_job.ReadDataRows(&shared_info_, rows_vec);
+}
+
+bool MysqlEngine::AddAsyncMysqlJob(const std::string& sql,
+                                   MysqlCallback callback,
+                                   MYSQL_JOB_TYPE type) {
+  MySqlJobAdapter* job = new MySqlJobAdapter(type, sql, callback);
+  shared_info_.PushMysqlJob(job);
+  return true;
 }
 
 } /* namespace base_logic */

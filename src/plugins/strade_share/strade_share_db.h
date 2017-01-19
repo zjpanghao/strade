@@ -40,6 +40,16 @@ class StradeShareDB {
     return mysql_engine_->ExcuteStorage(sql, rows_vec);
   }
 
+  bool AddAsyncMysqlJob(const std::string& sql,
+                        base_logic::MysqlCallback callback,
+                        base_logic::MYSQL_JOB_TYPE type) {
+    return mysql_engine_->AddAsyncMysqlJob(sql, callback, type);
+  }
+
+  base_logic::MysqlEngine* GetMysqlEngine() {
+    return mysql_engine_;
+  }
+
  private:
   base_logic::MysqlEngine* mysql_engine_;
 };

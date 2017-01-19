@@ -40,6 +40,7 @@ class SSEngine {
 
   // 更新实时行情数据
   virtual void UpdateStockRealMarketData(
+      time_t market_time,
       REAL_MARKET_DATA_VEC& stocks_market_data) = 0;
 
   // 更新股票当天历史数据
@@ -104,6 +105,14 @@ class SSEngine {
   virtual bool ExcuteStorage(
       const std::string& sql, std::vector<MYSQL_ROW>& rows_vec) = 0;
 
+  // 添加异步任务, type 表示读，写， 用于用不同的连接
+  virtual bool AddMysqlAsyncJob(const std::string& sql,
+                                base_logic::MysqlCallback callback,
+                                base_logic::MYSQL_JOB_TYPE type) = 0;
+
+  // 获取数据库连接
+  virtual base_logic::MysqlEngine* GetMysqlEngine() = 0;
+
 };
 
 struct StradeShareCache {
@@ -125,6 +134,7 @@ class SSEngineImpl : public SSEngine, public strade_logic::Subject {
   void LoadAllStockBasicInfo();
 
   virtual void UpdateStockRealMarketData(
+      time_t market_time,
       REAL_MARKET_DATA_VEC& stocks_market_data);
 
   virtual bool UpdateStockHistInfoByDate(
@@ -175,7 +185,7 @@ class SSEngineImpl : public SSEngine, public strade_logic::Subject {
   bool ReadData(const std::string& sql,
                 std::vector<T>& result) {
     base_logic::WLockGd lk(lock_);
-    return mysql_engine_->ReadData<T>(sql, result);
+    return strade_share_db_->ReadData<T>(sql, result);
   }
 
   virtual bool ReadDataRows(
@@ -184,6 +194,12 @@ class SSEngineImpl : public SSEngine, public strade_logic::Subject {
   virtual bool WriteData(const std::string& sql);
 
   virtual bool ExcuteStorage(const std::string& sql, std::vector<MYSQL_ROW>& rows_vec);
+
+  virtual bool AddMysqlAsyncJob(const std::string& sql,
+                                base_logic::MysqlCallback callback,
+                                base_logic::MYSQL_JOB_TYPE type);
+
+  virtual base_logic::MysqlEngine* GetMysqlEngine();
 
  private:
   bool GetStockTotalNonBlock(const std::string stock_code,
@@ -201,7 +217,7 @@ class SSEngineImpl : public SSEngine, public strade_logic::Subject {
  private:
   threadrw_t* lock_;
   StradeShareCache share_cache_;
-  StradeShareDB* mysql_engine_;
+  StradeShareDB* strade_share_db_;
   static SSEngineImpl* instance_;
 };
 
