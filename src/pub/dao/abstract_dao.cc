@@ -81,6 +81,4 @@ std::string AbstractDao::PopColumnValue() {
   return temp;
 }
 
-
-
 } /* namespace base_logic */

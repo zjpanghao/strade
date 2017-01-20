@@ -105,6 +105,9 @@ class StockHistInfo : public base_logic::AbstractDao{
   double get_low() const {
     return data_->low_;
   }
+  double get_close() const {
+    return data_->close_;
+  }
   double get_day_yield() const {
     return data_->day_yield_;
   }
