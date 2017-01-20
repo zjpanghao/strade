@@ -54,6 +54,12 @@ bool SSEngineImpl::InitParam() {
   }
   strade_share_db_ = new StradeShareDB(config);
   LoadAllStockBasicInfo();
+
+  user_engine_ = UserEngine::GetUserEngine();
+  if (!user_engine_->Init()) {
+    LOG_ERROR("init user engine error");
+    return false;
+  }
   return true;
 }
 
