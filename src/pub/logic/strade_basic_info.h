@@ -33,6 +33,8 @@ class StockRealInfo {
     return data_->stock_code_;
   }
 
+ public:
+  double price() const { return data_->price_; }
  private:
   class Data {
    public:
@@ -54,7 +56,7 @@ class StockRealInfo {
     std::string stock_code_;
     int32 trade_time_;
     double change_percent_;
-    double trade_;
+    double price_;
     double open_;
     double high_;
     double low_;

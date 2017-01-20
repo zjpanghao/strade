@@ -66,6 +66,18 @@ class OrderDealTimeFilter : public OrderFilter {
   time_t end_time_;
 };
 
+class OrderProfitFilter : public OrderFilter {
+ public:
+  OrderProfitFilter(double min, double max)
+      : min_(min),
+        max_(max) {}
+  ~OrderProfitFilter() {}
+  bool filter(const OrderInfo& order);
+ private:
+  double min_;
+  double max_;
+};
+
 } /* namespace strade_user */
 
 #endif /* SRC_PUB_LOGIC_ORDER_FILTER_H_ */

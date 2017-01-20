@@ -13,12 +13,18 @@
 
 namespace strade_user {
 
-bool Head::StartDeserialize(DictionaryValue& dict) {
-  return Head::Deserialize(dict) && Deserialize(dict);
+bool ReqHead::StartDeserialize(DictionaryValue& dict) {
+  return ReqHead::Deserialize(dict) && Deserialize(dict);
 }
 
-bool Head::Deserialize(DictionaryValue& dict) {
+bool ReqHead::Deserialize(DictionaryValue& dict) {
   int64 t;
+  if (!dict.GetBigInteger(L"type", &t)) {
+    LOG_ERROR("NOT FIND type");
+    return false;
+  }
+  type = t;
+
   if (!dict.GetBigInteger(L"opcode", &t)) {
     LOG_ERROR("NOT FIND opcode");
     return false;
@@ -38,18 +44,26 @@ bool Head::Deserialize(DictionaryValue& dict) {
   return true;
 }
 
-void Head::StartDump(std::ostringstream& oss) {
-  Head::Dump(oss);
+void ReqHead::StartDump(std::ostringstream& oss) {
+  ReqHead::Dump(oss);
   Dump(oss);
 }
 
-void Head::Dump(std::ostringstream& oss) {
-  oss << "\t\t--------- Head ---------" << std::endl;
+void ReqHead::Dump(std::ostringstream& oss) {
+  oss << "\n\t\t--------- Head ---------" << std::endl;
   OSS_WRITE(opcode);
   OSS_WRITE(user_id);
   OSS_WRITE(token);
 }
 
+///////////////////////////////////////////////////////////////////////////////
+bool ResHead::StartSerialize(DictionaryValue& dict) {
+  return ResHead::Serialize(dict) && Serialize(dict);
+}
+
+bool ResHead::Serialize(DictionaryValue& dict) {
+  return status.Serialize(dict);
+}
 ///////////////////////////////////////////////////////////////////////////////
 bool CreateGroupReq::Deserialize(DictionaryValue& dict) {
   if (!dict.GetString(L"group_name", &group_name)) {
@@ -259,7 +273,9 @@ void QueryTodayOrdersReq::Dump(std::ostringstream& oss) {
 }
 
 bool QueryTodayOrdersRes::OrderInfo::Serialize(DictionaryValue& dict) {
+  dict.SetBigInteger(L"id", id);
   dict.SetString(L"code", code);
+  dict.SetString(L"name", name);
   dict.SetBigInteger(L"order_operation", op);
   dict.SetReal(L"order_price", order_price);
   dict.SetBigInteger(L"order_nums", order_nums);
@@ -400,6 +416,11 @@ bool SubmitOrderReq::Deserialize(DictionaryValue& dict) {
     return false;
   }
 
+  if (!dict.GetReal(L"expected_price", &expected_price)) {
+    LOG_ERROR("NOT FIND expected_price");
+    return false;
+  }
+
   if (!dict.GetBigInteger(L"order_nums", &t)) {
     LOG_ERROR("NOT FIND order_nums");
     return false;
@@ -422,5 +443,120 @@ void SubmitOrderReq::Dump(std::ostringstream& oss) {
   OSS_WRITE(order_nums);
   OSS_WRITE((int)op);
 }
+
+bool SubmitOrderRes::Serialize(DictionaryValue& dict) {
+  dict.SetBigInteger(L"order_id", order_id);
+  return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+bool GroupStockHoldingReq::Deserialize(DictionaryValue& dict) {
+  int64 t;
+  if (!dict.GetBigInteger(L"group_id", &t)) {
+    LOG_ERROR("NOT FIND group_id");
+    return false;
+  }
+  group_id = t;
+
+  return true;
+}
+
+void GroupStockHoldingReq::Dump(std::ostringstream& oss) {
+  oss << "\t\t--------- GroupStockHoldingReq ---------" << std::endl;
+  OSS_WRITE(group_id);
+}
+
+bool GroupStockHoldingRes::StockInfo::Serialize(DictionaryValue& dict) {
+  dict.SetString(L"code", code);
+  dict.SetString(L"name", name);
+  dict.SetBigInteger(L"holding", holding);
+  return true;
+}
+
+bool GroupStockHoldingRes::Serialize(DictionaryValue& dict) {
+  ListValue* unit_list = new ListValue();
+  for (size_t i = 0; i < stock_list.size(); ++i) {
+    DictionaryValue* unit = new DictionaryValue();
+    stock_list[i].Serialize(*unit);
+    unit_list->Append(unit);
+  }
+  dict.Set(L"stock_list", unit_list);
+  return true;
+}
+///////////////////////////////////////////////////////////////////////////////
+bool AvailableStockCountReq::Deserialize(DictionaryValue& dict) {
+  if (!dict.GetString(L"code", &code)) {
+    LOG_ERROR("NOT FIND code");
+    return false;
+  }
+  return true;
+}
+
+void AvailableStockCountReq::Dump(std::ostringstream& oss) {
+  oss << "\t\t--------- AvailableStockCountReq ---------" << std::endl;
+}
+
+bool AvailableStockCountRes::Serialize(DictionaryValue& dict) {
+  dict.SetString(L"code", code);
+  dict.SetString(L"name", name);
+  dict.SetBigInteger(L"count", count);
+  return true;
+}
+///////////////////////////////////////////////////////////////////////////////
+bool CancelOrderReq::Deserialize(DictionaryValue& dict) {
+  int64 t;
+  if (!dict.GetBigInteger(L"order_id", &t)) {
+    LOG_ERROR("NOT FIND order_id");
+    return false;
+  }
+  order_id = t;
+  return true;
+}
+
+void CancelOrderReq::Dump(std::ostringstream& oss) {
+  oss << "\t\t--------- CancelOrder ---------" << std::endl;
+  OSS_WRITE(order_id);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+bool ProfitAndLossOrderNumReq::Deserialize(DictionaryValue& dict) {
+  return true;
+}
+
+void ProfitAndLossOrderNumReq::Dump(std::ostringstream& oss) {
+  oss << "\t\t--------- ProfitAndLossOrderNumReq ---------" << std::endl;
+}
+
+bool ProfitAndLossOrderNumRes::Serialize(DictionaryValue& dict) {
+  dict.SetBigInteger(L"profit_num", profit_num);
+  dict.SetBigInteger(L"loss_num", loss_num);
+  return true;
+}
+///////////////////////////////////////////////////////////////////////////////
+
+std::string Status::to_string() {
+  switch (state) {
+    case SUCCESS:
+      return "success";
+    case ERROR_MSG:
+      return "error msg";
+    case UNKNOWN_OPCODE:
+      return "UNKNOWN opcode";
+    case USER_NOT_EXIST:
+      return "user not exist";
+    case INVALID_TOKEN:
+      return "invalid token";
+    default:
+      return "UNKNOWN error";
+  }
+}
+
+bool Status::Serialize(DictionaryValue& dict) {
+  int64 t = state;
+  dict.SetBigInteger(L"status", t);
+  dict.SetString(L"msg", to_string());
+  return true;
+}
+
 }
 

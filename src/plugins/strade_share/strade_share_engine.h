@@ -13,10 +13,16 @@
 #include "logic/observer.h"
 #include "logic/subject.h"
 #include "logic/comm_head.h"
+#include "logic/user_info.h"
+#include "logic/user_engine.h"
 
 #include <vector>
 
 namespace strade_share {
+
+using strade_user::UserId;
+using strade_user::UserInfo;
+using strade_user::UserEngine;
 
 // 所有股票数据 key: 股票代码
 typedef std::map<std::string, strade_logic::StockTotalInfo> STOCKS_MAP;
@@ -104,6 +110,9 @@ class SSEngine {
   // 执行存储过程
   virtual bool ExcuteStorage(
       const std::string& sql, std::vector<MYSQL_ROW>& rows_vec) = 0;
+
+  // 获取用户对象'
+  virtual UserInfo* GetUser(UserId id) = 0;
 
   // 添加异步任务, type 表示读，写， 用于用不同的连接
   virtual bool AddMysqlAsyncJob(const std::string& sql,
@@ -195,6 +204,10 @@ class SSEngineImpl : public SSEngine, public strade_logic::Subject {
 
   virtual bool ExcuteStorage(const std::string& sql, std::vector<MYSQL_ROW>& rows_vec);
 
+  virtual UserInfo* GetUser(UserId id) {
+    return user_engine_->GetUser(id);
+  }
+
   virtual bool AddMysqlAsyncJob(const std::string& sql,
                                 base_logic::MysqlCallback callback,
                                 base_logic::MYSQL_JOB_TYPE type);
@@ -218,6 +231,7 @@ class SSEngineImpl : public SSEngine, public strade_logic::Subject {
   threadrw_t* lock_;
   StradeShareCache share_cache_;
   StradeShareDB* strade_share_db_;
+  UserEngine* user_engine_;
   static SSEngineImpl* instance_;
 };
 
