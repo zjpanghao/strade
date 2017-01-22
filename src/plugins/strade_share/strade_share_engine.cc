@@ -42,7 +42,13 @@ SSEngineImpl* SSEngineImpl::GetInstance() {
 }
 
 bool SSEngineImpl::Init() {
-
+  LOG_DEBUG("SSEngine init begin");
+  user_engine_ = UserEngine::GetUserEngine();
+  if (!user_engine_->Init()) {
+    LOG_ERROR("init user engine error");
+    return false;
+  }
+  LOG_DEBUG("SSEngine init end");
   return true;
 }
 
@@ -104,7 +110,7 @@ void SSEngineImpl::UpdateStockRealMarketData(
     REAL_MARKET_DATA_VEC::const_iterator iter(stocks_market_data.begin());
     for (; iter != stocks_market_data.end(); ++iter) {
       const strade_logic::StockRealInfo& stock_real_info = *iter;
-      const std::string& stock_code = stock_real_info.GetStockCode();
+      const std::string& stock_code = stock_real_info.code;
       if (!GetStockTotalNonBlock(stock_code, stock_total_info)) {
         LOG_ERROR2("UpdateStockRealMarketData stock_code=%s, not exists!!!!",
                    stock_code.c_str());
