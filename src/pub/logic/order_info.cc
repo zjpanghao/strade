@@ -46,7 +46,7 @@ std::string OrderInfo::GetUserOrderSql(UserId user_id) {
       << "`amount`, `profit`, `availableCapital` "
       << "FROM `delegation_record`"
       << "WHERE "
-      << "`userId` = " << user_id << " AND `status` = 0";
+      << "`userId` = " << user_id;
   return oss.str();
 }
 
@@ -75,91 +75,45 @@ void OrderInfo::Init(const OrderInfo& order) {
   data_->order_num_ = order.deal_num();
 }
 
-bool OrderInfo::Init(MYSQL_ROW row) {
-  if (NULL != row[ID]) {
-    data_->id_ = atoi(row[ID]);
-  }
+void OrderInfo::Deserialize() {
+  int t = 0;
+  data_->initialized_ = true;
 
-  if (NULL != row[USER_ID]) {
-    data_->user_id_ = atoi(row[USER_ID]);
-  }
+  GetInteger(ID, data_->id_);
+  GetInteger(USER_ID, data_->user_id_);
+  GetInteger(GROUP_ID, data_->group_id_);
+  GetString(STOCK, data_->code_);
+  GetReal(ORDER_PRICE, data_->order_price_);
+  GetReal(EXPECTED_PRICE, data_->expected_price_);
 
-  if (NULL != row[GROUP_ID]) {
-    data_->group_id_ = atoi(row[GROUP_ID]);
-  }
+  GetInteger(ORDER_OPERATION, t);
+  data_->op_ = (OrderOperation) t;
 
-  if (NULL != row[STOCK]) {
-    data_->code_ = row[STOCK];
-  }
+  GetInteger(ORDER_STATUS, t);
+  data_->status_ = (OrderStatus) t;
 
-  if (NULL != row[ORDER_PRICE]) {
-    data_->order_price_ = atof(row[ORDER_PRICE]);
-  }
+  GetInteger(ORDER_COUNT, data_->order_num_);
+  GetReal(FROZEN, data_->frozen_);
 
-  if (NULL != row[EXPECTED_PRICE]) {
-    data_->expected_price_ = atof(row[EXPECTED_PRICE]);
-  }
-
-  if (NULL != row[ORDER_OPERATION]) {
-    data_->op_ = (OrderOperation)atoi(row[ORDER_OPERATION]);
-  }
-
-  if (NULL != row[ORDER_STATUS]) {
-    data_->status_ = (OrderStatus)atoi(row[ORDER_STATUS]);
-  }
-
-  if (NULL != row[ORDER_COUNT]) {
-    data_->order_num_ = atoi(row[ORDER_COUNT]);
-  }
-
-  if (NULL != row[FROZEN]) {
-    data_->frozen_ = atof(row[FROZEN]);
-  }
-
-  if (NULL != row[ORDER_TYPE]) {
-    data_->type_  = (OrderType)atoi(row[ORDER_TYPE]);
-  }
+  GetInteger(ORDER_TYPE, t);
+  data_->type_ = (OrderType)t;
 
   if (FINISHED != data_->status_) {
-    return true;
+    return ;
   }
 
-  if (NULL != row[DEAL_TIME]) {
-    data_->deal_time_ = atoi(row[DEAL_TIME]);
+  if (GetInteger(DEAL_TIME, t)) {
+    data_->deal_time_ = t;
   }
 
-  if (NULL != row[DEAL_PRICE]) {
-    data_->deal_price_ = atof(row[DEAL_PRICE]);
-  }
-
-  if (NULL != row[DEAL_COUNT]) {
-    data_->deal_num_ = atoi(row[DEAL_COUNT]);
-  }
-
-  if (NULL != row[STAMP_DUTY]) {
-    data_->stamp_duty_ = atof(row[STAMP_DUTY]);
-  }
-
-  if (NULL != row[COMMISSION]) {
-    data_->commission_ = atof(row[COMMISSION]);
-  }
-
-  if (NULL != row[TRANSFER_FEE]) {
-    data_->transfer_fee_ = atof(row[TRANSFER_FEE]);
-  }
-
-  if (NULL != row[AMOUNT]) {
-    data_->amount_ = atof(row[AMOUNT]);
-  }
-
-  if (NULL != row[PROFIT]) {
-    data_->profit_ = atof(row[PROFIT]);
-  }
-
-  if (NULL != row[AVAILABLE_CAPITAL]) {
-    data_->available_capital_ = atof(row[AVAILABLE_CAPITAL]);
-  }
-  return true;
+  GetReal(DEAL_PRICE, data_->deal_price_);
+  GetInteger(DEAL_COUNT, data_->deal_num_);
+  GetReal(STAMP_DUTY, data_->stamp_duty_);
+  GetReal(COMMISSION, data_->commission_);
+  GetReal(TRANSFER_FEE, data_->transfer_fee_);
+  GetReal(AMOUNT, data_->amount_);
+  GetReal(PROFIT, data_->profit_);
+  GetReal(AVAILABLE_CAPITAL, data_->available_capital_);
 }
 
 bool OrderInfo::InitPendingOrder(MYSQL_ROW row) {
@@ -239,7 +193,7 @@ void OrderInfo::OnStockUpdate() {
   for (STOCK_REAL_MAP::reverse_iterator rit = stock.rbegin();
       stock.rend() != rit; ++rit) {
     if (rit->first >= data_->create_time_
-        && can_deal(rit->second.price())) {
+        && can_deal(rit->second.price)) {
       deal_it = rit;
     }
   }
@@ -253,7 +207,7 @@ void OrderInfo::OnStockUpdate() {
   stale_ = true;
 
   // can make a deal
-  MakeADeal(deal_it->second.price());
+  MakeADeal(deal_it->second.price);
 }
 
 void OrderInfo::OnOrderCancel() {
