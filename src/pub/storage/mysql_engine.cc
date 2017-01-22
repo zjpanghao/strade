@@ -25,7 +25,7 @@ void MysqlEngine::Initialize() {
 
   int ret = -1;
   ret = pthread_create(&mysql_thread_, NULL, MysqlThread::Run, &shared_info_);
-  if(0 != ret) {
+  if (0 != ret) {
     LOG_ERROR("mysql async thread create error");
     assert(0);
   }
@@ -77,28 +77,29 @@ bool MysqlEngine::CreateMysqlWriteEnginePool(int32 pool_num) {
   return true;
 }
 
+bool MysqlEngine::ReadDataRows(int column_num, const std::string& sql, MYSQL_ROWS_VEC& rows_vec) {
+  MySqlJobAdapter* job = new MySqlJobAdapter(MYSQL_READ, sql, column_num);
+  return job->ReadDataRows(&shared_info_, column_num, rows_vec);
+}
+
+bool MysqlEngine::ExcuteStorage(int column_num,
+                                const std::string& sql,
+                                MYSQL_ROWS_VEC& rows_vec) {
+  MySqlJobAdapter* job = new MySqlJobAdapter(MYSQL_STORAGE, sql, column_num);
+  return job->ReadDataRows(&shared_info_, column_num, rows_vec);
+}
+
 bool MysqlEngine::WriteData(const std::string& sql) {
   MySqlJobAdapter mysql_job(base_logic::MYSQL_WRITE, sql);
-  mysql_job.WriteData(&shared_info_);
-  return false;
+  return mysql_job.WriteData(&shared_info_);
 }
 
-bool MysqlEngine::ReadDataRows(const std::string& sql,
-                               std::vector<MYSQL_ROW>& rows_vec) {
-  MySqlJobAdapter mysql_job(base_logic::MYSQL_READ, sql);
-  return mysql_job.ReadDataRows(&shared_info_, rows_vec);
-}
-
-bool MysqlEngine::ExcuteStorage(const std::string& sql,
-                                std::vector<MYSQL_ROW>& rows_vec) {
-  MySqlJobAdapter mysql_job(base_logic::MYSQL_STORAGE, sql);
-  return mysql_job.ReadDataRows(&shared_info_, rows_vec);
-}
-
-bool MysqlEngine::AddAsyncMysqlJob(const std::string& sql,
+bool MysqlEngine::AddAsyncMysqlJob(int column_num,
+                                   const std::string& sql,
                                    MysqlCallback callback,
-                                   MYSQL_JOB_TYPE type) {
-  MySqlJobAdapter* job = new MySqlJobAdapter(type, sql, callback);
+                                   MYSQL_JOB_TYPE type,
+                                   void* param) {
+  MySqlJobAdapter* job = new MySqlJobAdapter(type, sql, column_num, callback);
   shared_info_.PushMysqlJob(job);
   return true;
 }

@@ -21,10 +21,10 @@ class StradeShareTimer {
   bool OnTimeLoadStockVisit();
 
  private:
-  static void OnTimeLoadStockVisitCallback(std::vector<MYSQL_ROW>& rows_vec);
+  static void OnTimeLoadStockVisitCallback(
+      int column_num, MYSQL_ROWS_VEC& rows_vec);
 
  private:
-  base_logic::MysqlEngine* mysql_engine_;
   static strade_share::SSEngine* ss_engine_;
 };
 

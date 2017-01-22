@@ -40,25 +40,14 @@ bool StradeShareDB::FetchAllStockList(std::vector<StockTotalInfo>& stock_vec) {
 
 bool StradeShareDB::FetchStockHistList(const std::string& stock_code,
                                        std::vector<StockHistInfo>& stock_hist_vec) {
-  static const std::string SQL =
+  std::string SQL =
       "SELECT date, open, high, close, low, qfq_close FROM algo_get_hist_data WHERE CODE = '"
           + stock_code + "' ORDER BY DATE DESC LIMIT 60;";
-  bool r = mysql_engine_->ReadData<StockHistInfo>(SQL, stock_hist_vec);
-  if(r) {
-    LOG_DEBUG2("stock_code=%s, load stock_hist_data size=%d",
-               stock_code.c_str(), stock_hist_vec.size());
-  }
-  return r;
-}
-
-bool StradeShareDB::ReadDataRows(const std::string& sql,
-                                 std::vector<MYSQL_ROW>& rows_vec) {
-  return mysql_engine_->ReadDataRows(sql, rows_vec);
+  return mysql_engine_->ReadData<StockHistInfo>(SQL, stock_hist_vec);
 }
 
 bool StradeShareDB::WriteData(const std::string& sql) {
   return mysql_engine_->WriteData(sql);
 }
-
 
 } /* namespace strade_share */

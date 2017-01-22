@@ -21,6 +21,12 @@
 #include <mysql/mysql.h>
 #include <sstream>
 
+// /*所有行*/vector<vector<所有列> >
+typedef std::vector<std::vector<std::string> > MYSQL_ROWS_VEC;
+
+// 异步回调函数指针
+typedef void (* MysqlCallback)(int column_num, MYSQL_ROWS_VEC& rows_vec, void* param);
+
 namespace base_logic {
 
 enum MYSQL_JOB_TYPE {
@@ -35,10 +41,7 @@ const int MYSQL_READ_ENGINE_NUM = 3;
 // 写连接数 >= 2
 const int MYSQL_WRITE_ENGINE_NUM = 2;
 
-// 异步回调函数指针
-typedef void (* MysqlCallback)(std::vector<MYSQL_ROW>& rows_vec);
-
-namespace  {
+namespace {
 
 struct MySqlJobAdapter;
 
@@ -88,7 +91,7 @@ struct MysqlEngineSharedInfo {
         break;
       }
       job = task_queue_.front();
-      if(NULL != job) {
+      if (NULL != job) {
         task_queue_.pop();
       }
       r = true;
@@ -170,10 +173,14 @@ struct MysqlEngineSharedInfo {
 struct MySqlJobAdapter {
   MySqlJobAdapter(MYSQL_JOB_TYPE type,
                   const std::string& sql,
-                  MysqlCallback callback = NULL)
+                  int column_num = 0,
+                  MysqlCallback callback = NULL,
+                  void* param = NULL)
       : type_(type),
         sql_(sql),
-        callback_(callback) {
+        callback_(callback),
+        column_num_(column_num),
+        param_(param) {
   }
 
   template<class T>
@@ -211,7 +218,8 @@ struct MySqlJobAdapter {
   }
 
   bool ReadDataRows(MysqlEngineSharedInfo* shared_info,
-                    std::vector<MYSQL_ROW>& rows_vec) {
+                    int coulmn_num,
+                    MYSQL_ROWS_VEC& rows_vec) {
     bool r = false;
     base_storage::DBStorageEngine* engine =
         shared_info->PopEngine(type_);
@@ -221,6 +229,7 @@ struct MySqlJobAdapter {
       return false;
     }
     do {
+      engine->FreeRes();
       r = engine->SQLExec(sql_.c_str());
       if (!r) {
         r = false;
@@ -231,7 +240,15 @@ struct MySqlJobAdapter {
       int32 num = engine->RecordCount();
       if (engine->RecordCount() > 0) {
         while ((rows = (*(MYSQL_ROW*) (engine->FetchRows())->proc))) {
-          rows_vec.push_back(rows);
+          std::vector<std::string> column_vec;
+          for (int i = 0; i < coulmn_num; ++i) {
+            std::string temp("");
+            if (rows[i]) {
+              temp = rows[i];
+            }
+            column_vec.push_back(temp);
+          }
+          rows_vec.push_back(column_vec);
         }
       }
       r = true;
@@ -267,6 +284,8 @@ struct MySqlJobAdapter {
   std::string sql_;
   MYSQL_JOB_TYPE type_;
   MysqlCallback callback_;
+  int column_num_;
+  void* param_;
 };
 
 struct MysqlThread {
@@ -284,12 +303,14 @@ struct MysqlThread {
         continue;
       }
       scoped_ptr<MySqlJobAdapter> mysql_job(job);
-      std::vector<MYSQL_ROW> rows_vec;
-      r = mysql_job->ReadDataRows(shared_info, rows_vec);
+      MYSQL_ROWS_VEC rows_vec;
+      r = mysql_job->ReadDataRows(
+          shared_info, mysql_job->column_num_, rows_vec);
       if (r && mysql_job->callback_) {
-        mysql_job->callback_(rows_vec);
-        continue;
+        mysql_job->callback_(
+            mysql_job->column_num_, rows_vec, mysql_job->param_);
       }
+      continue;
     }
     return NULL;
   }
@@ -317,21 +338,19 @@ class MysqlEngine {
     return mysql_job.ReadData<T>(&shared_info_, result);
   }
 
-  // 获取原始 MYSQL_ROW， 用于特殊处理
-  bool ReadDataRows(const std::string& sql,
-                    std::vector<MYSQL_ROW>& rows_vec);
+  bool ReadDataRows(int column_num, const std::string& sql, MYSQL_ROWS_VEC& rows_vec);
+
+  bool ExcuteStorage(int column_num, const std::string& sql, MYSQL_ROWS_VEC& rows_vec);
 
   // 更新数据
   bool WriteData(const std::string& sql);
 
-  // 执行存储过程
-  bool ExcuteStorage(const std::string& sql,
-                     std::vector<MYSQL_ROW>& rows_vec);
-
   // 异步添加查询任务
-  bool AddAsyncMysqlJob(const std::string& sql,
+  bool AddAsyncMysqlJob(int column_num,
+                        const std::string& sql,
                         MysqlCallback callback,
-                        MYSQL_JOB_TYPE type = MYSQL_WRITE);
+                        MYSQL_JOB_TYPE type,
+                        void* param = NULL);
 
  private:
   base::ConnAddr read_addr_;

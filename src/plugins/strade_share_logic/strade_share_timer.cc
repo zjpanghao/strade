@@ -35,48 +35,41 @@ bool StradeShareTimer::InitParam() {
     return false;
   }
   ss_engine_->Init();
-  mysql_engine_ = ss_engine_->GetMysqlEngine();
-  if (!mysql_engine_) {
-    return false;
-  }
   return true;
 }
 
 bool StradeShareTimer::OnTimeLoadStockVisit() {
   static const std::string LOAD_STOCK_VISIT_SQL =
       "SELECT stock_code, SUM(COUNT) FROM `stock_visit` GROUP BY stock_code";
-  mysql_engine_->AddAsyncMysqlJob(
-      LOAD_STOCK_VISIT_SQL, OnTimeLoadStockVisitCallback, MYSQL_READ);
+  ss_engine_->AddMysqlAsyncJob(2, LOAD_STOCK_VISIT_SQL, OnTimeLoadStockVisitCallback, MYSQL_READ);
   return true;
 }
 
 void StradeShareTimer::OnTimeLoadStockVisitCallback(
-    std::vector<MYSQL_ROW>& rows_vec) {
+    int column_num, MYSQL_ROWS_VEC& rows_vec) {
   bool r = false;
   StockTotalInfo stock_total_info;
-  std::vector<MYSQL_ROW>::iterator iter(rows_vec.begin());
-  for (; iter != rows_vec.end(); ++iter) {
-    MYSQL_ROW& rows = (*iter);
-    std::string stock_code("");
-    if (!rows[0]) {
-      stock_code = rows[0];
+  MYSQL_ROWS_VEC::iterator row_iter(rows_vec.begin());
+  for (; row_iter != rows_vec.end(); ++row_iter) {
+    std::vector<std::string> column_vec = (*row_iter);
+    assert(column_vec.size() == column_num);
+
+    std::string stock_code = column_vec[0];
+    if(stock_code.empty()) {
+      continue;
     }
-    int32 count = 0;
-    if (!stock_code.empty() && rows[1]) {
-      count = atoi(rows[1]);
-      if (count <= 0) {
-        continue;
-      }
-      r = ss_engine_->GetStockTotalInfoByCode(
-          stock_code, stock_total_info);
-      if (!r) {
-        continue;
-      }
-      stock_total_info.set_visit_num(count);
+    int visit_count = atoi(column_vec[1].c_str());
+    r = ss_engine_->GetStockTotalInfoByCode(
+        stock_code, stock_total_info);
+    if (!r) {
+      LOG_ERROR2("stock_code=%s, not find stock_total_info",
+                 stock_code.c_str());
+      continue;
     }
+    stock_total_info.set_visit_num(visit_count);
+
   }
-  LOG_DEBUG2("load stock visit num finshed! size=%d",
-            rows_vec.size());
+  LOG_DEBUG2("load stock visit num finshed! size=%d", rows_vec.size());
 }
 
 } /* namespace strade_share_logic */

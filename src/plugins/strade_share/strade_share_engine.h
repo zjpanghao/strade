@@ -102,25 +102,23 @@ class SSEngine {
 
   // 获取mysql 结果集， 用于自定义 MYSQL_ROW 的转化
   virtual bool ReadDataRows(
-      const std::string& sql, std::vector<MYSQL_ROW>& rows_vec) = 0;
+      int column_num, const std::string& sql, MYSQL_ROWS_VEC& rows_vec) = 0;
 
   // 更新数据
   virtual bool WriteData(const std::string& sql) = 0;
 
   // 执行存储过程
-  virtual bool ExcuteStorage(
-      const std::string& sql, std::vector<MYSQL_ROW>& rows_vec) = 0;
+  virtual bool ExcuteStorage(int column_num, const std::string& sql, MYSQL_ROWS_VEC& rows_vec) = 0;
 
   // 获取用户对象'
   virtual UserInfo* GetUser(UserId id) = 0;
 
   // 添加异步任务, type 表示读，写， 用于用不同的连接
-  virtual bool AddMysqlAsyncJob(const std::string& sql,
-                                base_logic::MysqlCallback callback,
-                                base_logic::MYSQL_JOB_TYPE type) = 0;
-
-  // 获取数据库连接
-  virtual base_logic::MysqlEngine* GetMysqlEngine() = 0;
+  virtual bool AddMysqlAsyncJob(int column_num,
+                                const std::string& sql,
+                                MysqlCallback callback,
+                                base_logic::MYSQL_JOB_TYPE type,
+                                void* param = NULL) = 0;
 
 };
 
@@ -197,25 +195,24 @@ class SSEngineImpl : public SSEngine, public strade_logic::Subject {
     return strade_share_db_->ReadData<T>(sql, result);
   }
 
-  virtual bool ReadDataRows(
-      const std::string& sql, std::vector<MYSQL_ROW>& rows_vec);
+  virtual bool ReadDataRows(int column_num, const std::string& sql, MYSQL_ROWS_VEC& rows_vec);
 
   virtual bool WriteData(const std::string& sql);
 
-  virtual bool ExcuteStorage(const std::string& sql, std::vector<MYSQL_ROW>& rows_vec);
-
+  virtual bool ExcuteStorage(int column_num, const std::string& sql, MYSQL_ROWS_VEC& rows_vec);
+  
   virtual UserInfo* GetUser(UserId id) {
     return user_engine_->GetUser(id);
   }
 
-  virtual bool AddMysqlAsyncJob(const std::string& sql,
-                                base_logic::MysqlCallback callback,
-                                base_logic::MYSQL_JOB_TYPE type);
-
-  virtual base_logic::MysqlEngine* GetMysqlEngine();
+  virtual bool AddMysqlAsyncJob(int column_num,
+                                const std::string& sql,
+                                MysqlCallback callback,
+                                base_logic::MYSQL_JOB_TYPE type,
+                                void* param = NULL);
 
  private:
-  bool GetStockTotalNonBlock(const std::string stock_code,
+  bool GetStockTotalNonBlock(const std::string& stock_code,
                              strade_logic::StockTotalInfo& stock_total_info) {
     STOCKS_MAP::iterator iter(share_cache_.stocks_map_.find(stock_code));
     if (iter != share_cache_.stocks_map_.end()) {
@@ -233,6 +230,7 @@ class SSEngineImpl : public SSEngine, public strade_logic::Subject {
   StradeShareDB* strade_share_db_;
   UserEngine* user_engine_;
   static SSEngineImpl* instance_;
+  static pthread_mutex_t mutex_;
 };
 
 } /* namespace strade_share */

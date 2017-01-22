@@ -3,6 +3,7 @@
 //
 
 #include "strade_share_engine.h"
+#include "dic/base_dic_redis_auto.h"
 
 #define DEFAULT_CONFIG_PATH  "./strade_share/stradeshare_config.xml"
 
@@ -13,6 +14,7 @@ strade_share::SSEngine* GetStradeShareEngine(void) {
 namespace strade_share {
 
 SSEngineImpl* SSEngineImpl::instance_ = NULL;
+pthread_mutex_t SSEngineImpl::mutex_ = PTHREAD_MUTEX_INITIALIZER;
 SSEngineImpl::SSEngineImpl() {
   if (!InitParam()) {
     LOG_ERROR("StradeShareEngineImpl Init error");
@@ -30,7 +32,11 @@ SSEngineImpl::~SSEngineImpl() {
 
 SSEngineImpl* SSEngineImpl::GetInstance() {
   if (NULL == instance_) {
-    instance_ = new SSEngineImpl();
+    pthread_mutex_lock(&mutex_);
+    if (NULL == instance_) {
+      instance_ = new SSEngineImpl();
+    }
+    pthread_mutex_unlock(&mutex_);
   }
   return instance_;
 }
@@ -54,12 +60,7 @@ bool SSEngineImpl::InitParam() {
   }
   strade_share_db_ = new StradeShareDB(config);
   LoadAllStockBasicInfo();
-
-  user_engine_ = UserEngine::GetUserEngine();
-  if (!user_engine_->Init()) {
-    LOG_ERROR("init user engine error");
-    return false;
-  }
+  assert(base_dic::KunDicPool::GetInstance()->Init(config->redis_list_, 100));
   return true;
 }
 
@@ -72,18 +73,24 @@ void SSEngineImpl::AttachObserver(strade_logic::Observer* observer) {
 
 void SSEngineImpl::LoadAllStockBasicInfo() {
   base_logic::WLockGd lk(lock_);
+  bool r = false;
   std::vector<strade_logic::StockTotalInfo> stock_vec;
   strade_share_db_->FetchAllStockList(stock_vec);
-  LOG_DEBUG2("LoadAllStockBasicInfo size=%d", stock_vec.size());
   std::vector<strade_logic::StockTotalInfo>::iterator iter(stock_vec.begin());
   for (; iter != stock_vec.end(); ++iter) {
-    strade_logic::StockTotalInfo& stock_total_info = (*iter);
+    strade_logic::StockTotalInfo stock_total_info = (*iter);
     std::vector<strade_logic::StockHistInfo> stock_hist_vec;
-    strade_share_db_->FetchStockHistList(
-        stock_total_info.get_stock_code(), stock_hist_vec);
+    std::string stock_code = stock_total_info.get_stock_code();
+    r = strade_share_db_->FetchStockHistList(stock_code, stock_hist_vec);
+    if (r) {
+      LOG_DEBUG2("stock_code=%s, load stock_hist_data size=%d",
+                 stock_code.c_str(), stock_hist_vec.size());
+    }
     stock_total_info.AddStockHistVec(stock_hist_vec);
     AddStockTotalInfoNonblock(stock_total_info);
   }
+  LOG_DEBUG2("LoadAllStockInfo size=%d",
+             share_cache_.stocks_map_.size());
 }
 
 void SSEngineImpl::UpdateStockRealMarketData(
@@ -189,7 +196,7 @@ bool SSEngineImpl::GetStockTotalInfoByCode(
     const std::string& stock_code,
     strade_logic::StockTotalInfo& stock_total_info) {
   base_logic::RLockGd lk(lock_);
-  GetStockTotalNonBlock(stock_code, stock_total_info);
+  return GetStockTotalNonBlock(stock_code, stock_total_info);
 }
 
 bool SSEngineImpl::GetStockHistInfoByDate(
@@ -227,10 +234,9 @@ bool SSEngineImpl::GetStockCurrRealMarketInfo(
   return stock_total_info.GetCurrRealMarketInfo(stock_real_info);
 }
 
-bool SSEngineImpl::ReadDataRows(
-    const std::string& sql, std::vector<MYSQL_ROW>& rows_vec) {
+bool SSEngineImpl::ReadDataRows(int column_num, const std::string& sql, MYSQL_ROWS_VEC& rows_vec) {
   base_logic::WLockGd lk(lock_);
-  return strade_share_db_->ReadDataRows(sql, rows_vec);
+  return strade_share_db_->ReadDataRows(column_num, sql, rows_vec);
 }
 
 bool SSEngineImpl::WriteData(const std::string& sql) {
@@ -238,20 +244,17 @@ bool SSEngineImpl::WriteData(const std::string& sql) {
   return strade_share_db_->WriteData(sql);
 }
 
-bool SSEngineImpl::ExcuteStorage(
-    const std::string& sql, std::vector<MYSQL_ROW>& rows_vec) {
-  return strade_share_db_->ExcuteStorage(sql, rows_vec);
+bool SSEngineImpl::ExcuteStorage(int column_num, const std::string& sql, MYSQL_ROWS_VEC& rows_vec) {
+  return strade_share_db_->ExcuteStorage(column_num, sql, rows_vec);
 }
 
-base_logic::MysqlEngine* SSEngineImpl::GetMysqlEngine() {
-  return strade_share_db_->GetMysqlEngine();
-}
-
-bool SSEngineImpl::AddMysqlAsyncJob(const std::string& sql,
-                                    base_logic::MysqlCallback callback,
-                                    base_logic::MYSQL_JOB_TYPE type) {
+bool SSEngineImpl::AddMysqlAsyncJob(int column_num,
+                                    const std::string& sql,
+                                    MysqlCallback callback,
+                                    base_logic::MYSQL_JOB_TYPE type,
+                                    void* param = NULL) {
   base_logic::WLockGd lk(lock_);
-  return strade_share_db_->AddAsyncMysqlJob(sql, callback, type);
+  return strade_share_db_->AddAsyncMysqlJob(column_num, sql, callback, type, param);
 }
 
 } /* namespace strade_share */
