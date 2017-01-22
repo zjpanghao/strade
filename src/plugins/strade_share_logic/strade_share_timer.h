@@ -22,7 +22,7 @@ class StradeShareTimer {
 
  private:
   static void OnTimeLoadStockVisitCallback(
-      int column_num, MYSQL_ROWS_VEC& rows_vec);
+      int column_num, MYSQL_ROWS_VEC& rows_vec, void* param);
 
  private:
   static strade_share::SSEngine* ss_engine_;

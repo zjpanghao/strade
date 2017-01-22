@@ -97,7 +97,7 @@ class SSEngine {
   template<typename T>
   bool ReadData(const std::string& sql,
                 std::vector<T>& result) {
-    return false;
+    return strade_share_db_->ReadData<T>(sql, result);
   }
 
   // 获取mysql 结果集， 用于自定义 MYSQL_ROW 的转化
@@ -120,6 +120,8 @@ class SSEngine {
                                 base_logic::MYSQL_JOB_TYPE type,
                                 void* param = NULL) = 0;
 
+ protected:
+  StradeShareDB* strade_share_db_;
 };
 
 struct StradeShareCache {
@@ -188,18 +190,12 @@ class SSEngineImpl : public SSEngine, public strade_logic::Subject {
   bool AddStockTotalInfoBlock(
       const strade_logic::StockTotalInfo& stock_total_info);
 
-  template<typename T>
-  bool ReadData(const std::string& sql,
-                std::vector<T>& result) {
-    return strade_share_db_->ReadData<T>(sql, result);
-  }
-
   virtual bool ReadDataRows(int column_num, const std::string& sql, MYSQL_ROWS_VEC& rows_vec);
 
   virtual bool WriteData(const std::string& sql);
 
   virtual bool ExcuteStorage(int column_num, const std::string& sql, MYSQL_ROWS_VEC& rows_vec);
-  
+
   virtual UserInfo* GetUser(UserId id) {
     return user_engine_->GetUser(id);
   }
@@ -226,7 +222,7 @@ class SSEngineImpl : public SSEngine, public strade_logic::Subject {
  private:
   threadrw_t* lock_;
   StradeShareCache share_cache_;
-  StradeShareDB* strade_share_db_;
+
   UserEngine* user_engine_;
   static SSEngineImpl* instance_;
   static pthread_mutex_t mutex_;
