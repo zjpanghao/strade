@@ -9,7 +9,6 @@
 
 #include "logic/logic_comm.h"
 #include "strade_share/strade_share_engine.h"
-#include "logic/strade_basic_info.h"
 
 namespace strade_user {
 
@@ -26,67 +25,55 @@ UserInfo::UserInfo() {
 
 REFCOUNT_DEFINE(UserInfo)
 
-bool UserInfo::Init(const MYSQL_ROW row) {
-  if (NULL != row[ID]) {
-    data_->id_ = atoi(row[ID]);
-  }
-  if (NULL != row[NAME]) {
-    data_->name_ = row[NAME];
-  }
-  if (NULL != row[PASSWORD]) {
-    data_->password_ = row[PASSWORD];
-  }
-  if (NULL != row[PLATFORM_ID]) {
-    data_->platform_id_ = atoi(row[PLATFORM_ID]);
-  }
-  if (NULL != row[USER_LEVEL]) {
-    data_->level_ = atoi(row[USER_LEVEL]);
-  }
-  if (NULL != row[EMAIL]) {
-    data_->email_ = row[EMAIL];
-  }
-  if (NULL != row[PHONE]) {
-    data_->phone_ = row[PHONE];
-  }
-  if (NULL != row[AVAILABLE_CAPITAL]) {
-    data_->available_capital_ = atof(row[AVAILABLE_CAPITAL]);
-  }
-  if (NULL != row[FROZEN_CAPITAL]) {
-    data_->frozen_capital_ = atof(row[FROZEN_CAPITAL]);
-  }
+void UserInfo::Deserialize() {
+  GetInteger(ID, data_->id_);
+  GetString(NAME, data_->name_);
+  GetString(PASSWORD, data_->password_);
+  GetInteger(PLATFORM_ID, data_->platform_id_);
+  GetInteger(USER_LEVEL, data_->level_);
+  GetString(EMAIL, data_->email_);
+  GetString(PHONE, data_->phone_);
+  GetReal(AVAILABLE_CAPITAL, data_->available_capital_);
+  GetReal(FROZEN_CAPITAL, data_->frozen_capital_);
+
+  data_->initialized_ = true;
   LOG_DEBUG2("init user:%d, name:%s, passwd:%s, platform_id:%d, user_level:%d, "
       "email:%s, phone:%s, available_capital:%lf, frozen_capital:%lf",
       data_->id_, data_->name_.data(), data_->password_.data(), data_->platform_id_,
       data_->level_, data_->email_.data(), data_->phone_.data(),
       data_->available_capital_, data_->frozen_capital_);
+}
 
-  return InitStockGroup() && InitStockPosition() && InitOrder();
+bool UserInfo::Init() {
+  return data_->initialized_ &&
+      InitStockGroup() &&
+      InitStockPosition() &&
+      InitOrder();
 }
 
 bool UserInfo::InitStockGroup() {
   SSEngine* engine = GetStradeShareEngine();
-  std::vector<MYSQL_ROW> rows;
-  if (!engine->ReadDataRows(StockGroup::GetUserGroupSql(data_->id_), rows)) {
+  std::vector<StockGroup> sgs;
+  if (!engine->ReadData(StockGroup::GetUserGroupSql(data_->id_), sgs)) {
     LOG_ERROR2("init user:%s stock group error", data_->name_.data());
     return false;
   }
 
   bool find_default = false;
-  for (size_t i = 0; i < rows.size(); ++i) {
-    StockGroup group;
-    if (!group.Init(rows[i])) {
+  for (size_t i = 0; i < sgs.size(); ++i) {
+    if (!(sgs[i].initialized() && sgs[i].InitStockList())) {
       continue;
     }
-    data_->stock_group_list_.push_back(group);
-    if (group.status() == StockGroup::DEFAULT) {
+    data_->stock_group_list_.push_back(sgs[i]);
+    if (sgs[i].status() == StockGroup::DEFAULT) {
       find_default = true;
-      data_->default_gid_ = group.id();
+      data_->default_gid_ = sgs[i].id();
     }
   }
 
   if (!find_default) {
     std::string name = "DEFAULT";
-    GroupId group_id = StockGroup::CreateGroup(data_->id_, name);
+    GroupId group_id = StockGroup::CreateGroup(data_->id_, name, StockGroup::DEFAULT);
     if (INVALID_GROUPID == group_id) {
       LOG_ERROR2("user:%s create DEFAULT group error", data_->name_.data());
       return false;
@@ -97,25 +84,25 @@ bool UserInfo::InitStockGroup() {
     data_->stock_group_list_.push_back(g);
   }
 
-  LOG_MSG2("user:%s init %d stock groups", data_->name_.data(), rows.size());
+  LOG_MSG2("user:%s init %d stock groups", data_->name_.data(), sgs.size());
   return true;
 }
 
 bool UserInfo::InitStockPosition() {
   SSEngine* engine = GetStradeShareEngine();
-  std::vector<MYSQL_ROW> rows;
+  std::vector<GroupStockPosition> rows;
   std::string sql = GroupStockPosition::GetGroupStockPositionSql(data_->id_);
-  if (!engine->ReadDataRows(sql, rows)) {
+  if (!engine->ReadData(sql, rows)) {
     LOG_ERROR2("init user:%s group stock position error", data_->name_.data());
     return false;
   }
 
   for (size_t i = 0; i < rows.size(); ++i) {
-    GroupStockPosition p;
-    if (!p.Init(rows[i])) {
+    rows[i].set_user_id(data_->id_);
+    if (!(rows[i].initialized() && rows[i].InitFakeStockPosition())) {
       continue;
     }
-    data_->stock_position_list_.push_back(p);
+    data_->stock_position_list_.push_back(rows[i]);
   }
   LOG_MSG2("user:%s init %d group stock position",
            data_->name_.data(), rows.size());
@@ -124,16 +111,17 @@ bool UserInfo::InitStockPosition() {
 
 bool UserInfo::InitOrder() {
   SSEngine* engine = GetStradeShareEngine();
-  std::vector<MYSQL_ROW> rows;
+  std::vector<OrderInfo> orders;
   std::string sql = OrderInfo::GetUserOrderSql(data_->id_);
-  if (!engine->ReadDataRows(sql, rows)) {
+  if (!engine->ReadData(sql, orders)) {
     LOG_ERROR2("init user:%s orders error", data_->name_.data());
     return false;
   }
 
-  for (size_t i = 0; i < rows.size(); ++i) {
-    OrderInfo o;
-    if (!o.Init(rows[i])) {
+  for (size_t i = 0; i < orders.size(); ++i) {
+    OrderInfo& o = orders[i];
+    if (!o.initialized()) {
+      LOG_ERROR("init order error");
       continue;
     }
     data_->order_list_.push_back(o);
@@ -147,7 +135,7 @@ bool UserInfo::InitOrder() {
     }
   }
   LOG_MSG2("user:%s init %d orders",
-           data_->name_.data(), rows.size());
+           data_->name_.data(), orders.size());
 
   BindOrder();
   return true;
@@ -419,14 +407,14 @@ Status::State UserInfo::SubmitOrder(SubmitOrderReq& req) {
       << (int)req.op << ","
       << req.order_nums << ","
       << frozen << ")";
-  std::vector<MYSQL_ROW> row;
-  if (!engine->ExcuteStorage(oss.str(), row)) {
+  MYSQL_ROWS_VEC row;
+  if (!engine->ExcuteStorage(1, oss.str(), row)) {
     LOG_ERROR2("user:%s submit order error: mysql error",
                data_->name_.data());
     return Status::MYSQL_ERROR;
   }
   assert(!row.empty());
-  OrderId order_id = atoi(row[0][0]);
+  OrderId order_id = atoi(row[0][0].data());
   LOG_MSG2("user:%s new order:%d, code:%s, count:%d",
            data_->name_.data(), order_id, req.order_nums);
 
@@ -436,9 +424,9 @@ Status::State UserInfo::SubmitOrder(SubmitOrderReq& req) {
   order->set_frozen(frozen);
 
   // check can make a deal
-  if (order->can_deal(stock.rbegin()->second.price())) {
+  if (order->can_deal(stock.rbegin()->second.price)) {
     UnlockThreadrw(data_->lock_);
-    order->MakeADeal(stock.rbegin()->second.price());
+    order->MakeADeal(stock.rbegin()->second.price);
     return Status::SUCCESS;
   }
 
@@ -465,16 +453,16 @@ bool UserInfo::OnBuyOrderDone(OrderInfo* order) {
       << order->amount() << ","
       << data_->available_capital_ << ")";
 
-  std::vector<MYSQL_ROW> row;
+  MYSQL_ROWS_VEC row;
   SSEngine* engine = GetStradeShareEngine();
-  if (!engine->ExcuteStorage(oss.str(), row)) {
+  if (!engine->ExcuteStorage(1, oss.str(), row)) {
     LOG_ERROR2("user:%s update buy order mysql error", data_->name_.data());
     return false;
   }
 
   // add new FakeStockPosition
   assert(!row.empty());
-  StockPositionId id = atoi(row[0][0]);
+  StockPositionId id = atoi(row[0][0].data());
   FakeStockPosition fp(id, order);
   GroupStockPosition* gp =
       GetGroupStockPosition(order->group_id(), order->code());
@@ -504,13 +492,13 @@ bool UserInfo::OnBuyOrderDone(OrderInfo* order) {
       << order->deal_num() << ","
       << 0 << ")";
   row.clear();
-  if (!engine->ExcuteStorage(oss.str(), row)) {
+  if (!engine->ExcuteStorage(1, oss.str(), row)) {
     LOG_ERROR2("user:%s AUTO generate order error: mysql error",
                data_->name_.data());
     return false;
   }
   assert(!row.empty());
-  OrderId order_id = atoi(row[0][0]);
+  OrderId order_id = atoi(row[0][0].data());
   LOG_MSG2("user:%s new order:%d, code:%s, count:%d",
            data_->name_.data(), order_id, order->deal_num());
 
