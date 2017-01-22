@@ -40,19 +40,12 @@ std::string FakeStockPosition::GetFakeStockPositionSql(
   return oss.str();
 }
 
-bool FakeStockPosition::Init(MYSQL_ROW row) {
-  if (NULL != row[HOLDING_ID]) {
-    data_->id_ = atoi(row[HOLDING_ID]);
-  }
+void FakeStockPosition::Deserialize() {
+  GetInteger(HOLDING_ID, data_->id_);
+  GetInteger(NUM, data_->count_);
+  GetInteger(ORDER_ID, data_->order_id_);
 
-  if (NULL != row[NUM]) {
-    data_->count_ = atoi(row[NUM]);
-  }
-
-  if (NULL != row[ORDER_ID]) {
-    data_->order_id_ = atoi(row[ORDER_ID]);
-  }
-  return true;
+  data_->initialized_ = true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -78,39 +71,35 @@ std::string GroupStockPosition::GetGroupStockPositionSql(UserId user_id) {
   return oss.str();
 }
 
-bool GroupStockPosition::Init(MYSQL_ROW row) {
-  if (NULL != row[0]) {
-    data_->code_ = row[0];
-  }
+void GroupStockPosition::Deserialize() {
+  GetString(0, data_->code_);
+  GetInteger(1, data_->group_id_);
 
-  if (NULL != row[1]) {
-    data_->group_id_ = atoi(row[1]);
-  }
-  return InitFakeStockPosition();
+  data_->initialized_ = true;
 }
 
 bool GroupStockPosition::InitFakeStockPosition() {
   SSEngine* engine = GetStradeShareEngine();
-  std::vector<MYSQL_ROW> rows;
+  std::vector<FakeStockPosition> sps;
   std::string sql =
       FakeStockPosition::GetFakeStockPositionSql(data_->user_id_,
                                                  data_->group_id_,
                                                  data_->code_);
-  if (!engine->ReadDataRows(sql, rows)) {
+  if (!engine->ReadData(sql, sps)) {
     LOG_ERROR2("init user:%d fake stock position error", data_->user_id_);
     return false;
   }
 
-  for (size_t i = 0; i < rows.size(); ++i) {
-    FakeStockPosition p;
-    if (!p.Init(rows[i])) {
+  for (size_t i = 0; i < sps.size(); ++i) {
+    if (!sps[i].initialized()) {
+      LOG_ERROR("init FakeStockPosition error");
       continue;
     }
-    data_->count_ += p.count();
-    data_->fake_stock_position_list_.push_back(p);
+    data_->count_ += sps[i].count();
+    data_->fake_stock_position_list_.push_back(sps[i]);
   }
-  LOG_MSG2("user:%d init %d fake stock position",
-           data_->user_id_, rows.size());
+  LOG_MSG2("user:%d group:%d init %d fake stock position",
+           data_->user_id_, data_->group_id_, sps.size());
   return true;
 }
 double GroupStockPosition::cost() const {
