@@ -19,12 +19,12 @@ MysqlEngine::~MysqlEngine() {
 }
 
 void MysqlEngine::Initialize() {
-
   CreateMysqlReadEnginePool(MYSQL_READ_ENGINE_NUM);
   CreateMysqlWriteEnginePool(MYSQL_WRITE_ENGINE_NUM);
-
-  int ret = -1;
-  ret = pthread_create(&mysql_thread_, NULL, MysqlThread::Run, &shared_info_);
+  int ret = pthread_create(&mysql_thread_,
+                           NULL,
+                           MysqlThread::Run,
+                           &shared_info_);
   if (0 != ret) {
     LOG_ERROR("mysql async thread create error");
     assert(0);
@@ -42,7 +42,6 @@ bool MysqlEngine::CreateMysqlReadEnginePool(int32 pool_num) {
       LOG_ERROR("create db conntion error");
       assert(0);
     }
-
     // Create read engine
     r = read_engine->Connections(read_addr_list);
     if (!r) {
@@ -57,7 +56,6 @@ bool MysqlEngine::CreateMysqlReadEnginePool(int32 pool_num) {
 bool MysqlEngine::CreateMysqlWriteEnginePool(int32 pool_num) {
   std::list<base::ConnAddr> write_addr_list;
   write_addr_list.push_back(write_addr_);
-
   // Create write engine
   for (int i = 0; i < pool_num; ++i) {
     bool r = false;
@@ -77,21 +75,23 @@ bool MysqlEngine::CreateMysqlWriteEnginePool(int32 pool_num) {
   return true;
 }
 
-bool MysqlEngine::ReadDataRows(int column_num, const std::string& sql, MYSQL_ROWS_VEC& rows_vec) {
-  MySqlJobAdapter* job = new MySqlJobAdapter(MYSQL_READ, sql, column_num);
-  return job->ReadDataRows(&shared_info_, column_num, rows_vec);
+bool MysqlEngine::ReadDataRows(int column_num,
+                               const std::string& sql,
+                               MYSQL_ROWS_VEC& rows_vec) {
+  MySqlJobAdapter job(MYSQL_READ, sql, column_num);
+  return job.ReadDataRows(&shared_info_, column_num, rows_vec);
 }
 
 bool MysqlEngine::ExcuteStorage(int column_num,
                                 const std::string& sql,
                                 MYSQL_ROWS_VEC& rows_vec) {
-  MySqlJobAdapter* job = new MySqlJobAdapter(MYSQL_STORAGE, sql, column_num);
-  return job->ReadDataRows(&shared_info_, column_num, rows_vec);
+  MySqlJobAdapter job(MYSQL_STORAGE, sql, column_num);
+  return job.ReadDataRows(&shared_info_, column_num, rows_vec);
 }
 
 bool MysqlEngine::WriteData(const std::string& sql) {
-  MySqlJobAdapter mysql_job(base_logic::MYSQL_WRITE, sql);
-  return mysql_job.WriteData(&shared_info_);
+  MySqlJobAdapter job(base_logic::MYSQL_WRITE, sql);
+  return job.WriteData(&shared_info_);
 }
 
 bool MysqlEngine::AddAsyncMysqlJob(int column_num,
@@ -99,7 +99,8 @@ bool MysqlEngine::AddAsyncMysqlJob(int column_num,
                                    MysqlCallback callback,
                                    MYSQL_JOB_TYPE type,
                                    void* param) {
-  MySqlJobAdapter* job = new MySqlJobAdapter(type, sql, column_num, callback);
+  MySqlJobAdapter* job = new MySqlJobAdapter(
+      type, sql, column_num, callback, param);
   shared_info_.PushMysqlJob(job);
   return true;
 }

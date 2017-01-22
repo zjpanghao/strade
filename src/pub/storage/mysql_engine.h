@@ -308,7 +308,9 @@ struct MysqlThread {
           shared_info, mysql_job->column_num_, rows_vec);
       if (r && mysql_job->callback_) {
         mysql_job->callback_(
-            mysql_job->column_num_, rows_vec, mysql_job->param_);
+            mysql_job->column_num_,
+            rows_vec,
+            mysql_job->param_);
       }
     }
     return NULL;
@@ -322,11 +324,13 @@ class MysqlEngine {
   MysqlEngine(base::ConnAddr& read_addr,
               base::ConnAddr& write_addr);
   ~MysqlEngine();
-  void Initialize();
 
  private:
-  bool CreateMysqlReadEnginePool(int32 pool_num = 3);
-  bool CreateMysqlWriteEnginePool(int32 pool_num = 2);
+  void Initialize();
+  bool CreateMysqlReadEnginePool(
+      int32 pool_num = MYSQL_READ_ENGINE_NUM);
+  bool CreateMysqlWriteEnginePool(
+      int32 pool_num = MYSQL_WRITE_ENGINE_NUM);
 
  public:
   // 获取对象
@@ -337,9 +341,13 @@ class MysqlEngine {
     return mysql_job.ReadData<T>(&shared_info_, result);
   }
 
-  bool ReadDataRows(int column_num, const std::string& sql, MYSQL_ROWS_VEC& rows_vec);
+  bool ReadDataRows(int column_num,
+                    const std::string& sql,
+                    MYSQL_ROWS_VEC& rows_vec);
 
-  bool ExcuteStorage(int column_num, const std::string& sql, MYSQL_ROWS_VEC& rows_vec);
+  bool ExcuteStorage(int column_num,
+                     const std::string& sql,
+                     MYSQL_ROWS_VEC& rows_vec);
 
   // 更新数据
   bool WriteData(const std::string& sql);
