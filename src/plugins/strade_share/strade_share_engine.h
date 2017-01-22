@@ -191,7 +191,6 @@ class SSEngineImpl : public SSEngine, public strade_logic::Subject {
   template<typename T>
   bool ReadData(const std::string& sql,
                 std::vector<T>& result) {
-    base_logic::WLockGd lk(lock_);
     return strade_share_db_->ReadData<T>(sql, result);
   }
 

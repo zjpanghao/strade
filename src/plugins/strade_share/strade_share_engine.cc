@@ -235,12 +235,10 @@ bool SSEngineImpl::GetStockCurrRealMarketInfo(
 }
 
 bool SSEngineImpl::ReadDataRows(int column_num, const std::string& sql, MYSQL_ROWS_VEC& rows_vec) {
-  base_logic::WLockGd lk(lock_);
   return strade_share_db_->ReadDataRows(column_num, sql, rows_vec);
 }
 
 bool SSEngineImpl::WriteData(const std::string& sql) {
-  base_logic::WLockGd lk(lock_);
   return strade_share_db_->WriteData(sql);
 }
 
@@ -253,7 +251,6 @@ bool SSEngineImpl::AddMysqlAsyncJob(int column_num,
                                     MysqlCallback callback,
                                     base_logic::MYSQL_JOB_TYPE type,
                                     void* param = NULL) {
-  base_logic::WLockGd lk(lock_);
   return strade_share_db_->AddAsyncMysqlJob(column_num, sql, callback, type, param);
 }
 

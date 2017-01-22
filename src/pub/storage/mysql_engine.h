@@ -139,6 +139,8 @@ struct MysqlEngineSharedInfo {
                   base_storage::DBStorageEngine* engine) {
     assert(NULL != engine);
     pthread_mutex_lock(&mutex_);
+    // 释放结果集
+    engine->FreeRes();
     switch (engine_type) {
       case MYSQL_WRITE:
       case MYSQL_STORAGE: {
@@ -229,7 +231,6 @@ struct MySqlJobAdapter {
       return false;
     }
     do {
-      engine->FreeRes();
       r = engine->SQLExec(sql_.c_str());
       if (!r) {
         r = false;
@@ -293,7 +294,6 @@ struct MysqlThread {
     LOG_DEBUG("mysql async thread run");
     MysqlEngineSharedInfo* shared_info =
         static_cast<MysqlEngineSharedInfo*>(param);
-    base_storage::DBStorageEngine* db_engine = NULL;
     bool r = false;
     while (true) {
       MySqlJobAdapter* job = NULL;
@@ -310,7 +310,6 @@ struct MysqlThread {
         mysql_job->callback_(
             mysql_job->column_num_, rows_vec, mysql_job->param_);
       }
-      continue;
     }
     return NULL;
   }
