@@ -46,7 +46,7 @@ bool StradeShareTimer::OnTimeLoadStockVisit() {
 }
 
 void StradeShareTimer::OnTimeLoadStockVisitCallback(
-    int column_num, MYSQL_ROWS_VEC& rows_vec) {
+    int column_num, MYSQL_ROWS_VEC& rows_vec, void* param) {
   bool r = false;
   StockTotalInfo stock_total_info;
   MYSQL_ROWS_VEC::iterator row_iter(rows_vec.begin());
