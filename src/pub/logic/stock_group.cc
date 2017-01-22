@@ -39,7 +39,7 @@ std::string StockGroup::GetUserGroupSql(UserId user_id) {
 
 std::string StockGroup::GetGroupStockSql(UserId group_id) {
   std::ostringstream oss;
-  oss << "SELECT `stockCode`, `addTime` FROM `group_info` "
+  oss << "SELECT `stockCode`, `addTime` FROM `group_stock` "
       "WHERE `groupId` = " << group_id;
   return oss.str();
 }
@@ -53,49 +53,49 @@ GroupId StockGroup::CreateGroup(UserId user_id,
       << "'" << name << "'" << ","
       << (int)status << ")";
 
-  std::vector<MYSQL_ROW> row;
+  MYSQL_ROWS_VEC row;
   SSEngine* engine = GetStradeShareEngine();
-  if (!engine->ExcuteStorage(oss.str(), row)) {
+  if (!engine->ExcuteStorage(1, oss.str(), row)) {
     LOG_ERROR2("user:%d create stock group error", user_id);
     return INVALID_GROUPID;
   }
 
   assert(!row.empty());
-  GroupId id = atoi(row[0][0]);
+  GroupId id = atoi(row[0][0].data());
   LOG_MSG2("user:%d create stock group, id:%d, name:%s",
            user_id, id, name.data());
   return id;
 }
 
-bool StockGroup::Init(const MYSQL_ROW row) {
-  if (NULL != row[0]) {
-    data_->id_ = atoi(row[0]);
-  }
-  if (NULL != row[1]) {
-    data_->name_ = row[1];
-  }
-  if (NULL != row[2]) {
-    data_->status_ = (Status)atoi(row[2]);
-  }
-  return InitStockList();
+void StockGroup::Deserialize() {
+  int t = 0;
+  GetInteger(0, data_->id_);
+  GetString(1, data_->name_);
+  GetInteger(2, t);
+  data_->status_ = (Status) t;
+
+  data_->initialized_ = true;
 }
 
 bool StockGroup::InitStockList() {
   SSEngine* engine = GetStradeShareEngine();
-  std::vector<MYSQL_ROW> rows;
-  if (!engine->ReadDataRows(GetGroupStockSql(data_->id_), rows)) {
-    LOG_ERROR("init user info error");
+  MYSQL_ROWS_VEC stocks;
+  if (!engine->ExcuteStorage(2, GetGroupStockSql(data_->id_), stocks)) {
+    LOG_ERROR("init user stock list error");
     return false;
   }
 
-  for (size_t i = 0; i < rows.size(); ++i) {
-    if (NULL == rows[i]) {
+  for (size_t i = 0; i < stocks.size(); ++i) {
+    std::string& stock = stocks[i][0];
+    if (stock.empty()) {
+      LOG_ERROR("init user group stock error");
       continue;
     }
-    data_->stock_list_.push_back(rows[i][0]);
-    data_->stock_set_.insert(rows[i][0]);
+    data_->stock_list_.push_back(stock);
+    data_->stock_set_.insert(stock);
   }
-  LOG_MSG2("group:%s init %d stocks", data_->name_.data(), rows.size());
+  LOG_MSG2("user:%d group:%s init %d stocks",
+           data_->user_id_, data_->name_.data(), stocks.size());
   return true;
 }
 
