@@ -119,8 +119,8 @@ void SSEngineImpl::UpdateStockRealMarketData(
       stock_total_info.AddStockRealInfoByTime(market_time, stock_real_info);
       ++total_count;
     }
-    LOG_DEBUG2("UpdateStockRealMarketData total_count=%d, current_time=%d",
-               total_count, time(NULL));
+    LOG_DEBUG2("total_count=%d, current_time=%d",
+               total_count, market_time);
   }
 
   // 通知所有需要实时行情数据的观察者
