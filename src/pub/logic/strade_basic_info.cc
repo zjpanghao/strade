@@ -7,6 +7,7 @@
 
 namespace strade_logic {
 
+/*
 StockRealInfo::StockRealInfo() {
   data_ = new Data();
 }
@@ -37,6 +38,7 @@ StockRealInfo::~StockRealInfo() {
     data_->Release();
   }
 }
+*/
 
 StockHistInfo::StockHistInfo() {
   data_ = new Data();

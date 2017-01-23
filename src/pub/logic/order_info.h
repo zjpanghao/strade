@@ -15,13 +15,15 @@
 #include "user_defined_types.h"
 #include "basic/basictypes.h"
 #include "observer.h"
+#include "dao/abstract_dao.h"
 
 
 namespace strade_user {
 
 struct SubmitOrderReq;
 
-class OrderInfo : public strade_logic::Observer {
+class OrderInfo : public strade_logic::Observer,
+                  public base_logic::AbstractDao {
  public:
   enum {
     ID,
@@ -60,7 +62,6 @@ class OrderInfo : public strade_logic::Observer {
   static std::string GetUserOrderSql(UserId user_id);
 
  public:
-  bool Init(MYSQL_ROW row);
   void Init(const SubmitOrderReq& req);
   // call while automatic generate orer
   void Init(const OrderInfo& order);
@@ -70,6 +71,7 @@ class OrderInfo : public strade_logic::Observer {
   bool MakeADeal(double price);
   void OnOrderCancel();
  private:
+  void Deserialize();
   void Update(int opcode);
   void OnStockUpdate();
  public:
@@ -115,6 +117,7 @@ class OrderInfo : public strade_logic::Observer {
     }
   }
 
+  bool initialized() const { return data_->initialized_; }
  private:
   class Data {
    public:
@@ -137,10 +140,12 @@ class OrderInfo : public strade_logic::Observer {
           stamp_duty_(0.0),
           amount_(0.0),
           profit_(0.0),
-          available_capital_(0.0) {
+          available_capital_(0.0),
+          initialized_(false) {
     }
 
    public:
+    bool initialized_;
     OrderId id_;
     UserId user_id_;
     GroupId group_id_;
@@ -157,7 +162,7 @@ class OrderInfo : public strade_logic::Observer {
 
     time_t deal_time_;
     double deal_price_;
-    double deal_num_;
+    uint32 deal_num_;
     double commission_;
     double transfer_fee_;
     double stamp_duty_;

@@ -11,6 +11,7 @@ namespace strade_user {
 
 class UserEngine {
  public:
+  ~UserEngine();
   static UserEngine* GetUserEngine() {
     static UserEngine engine;
     return &engine;
@@ -21,9 +22,9 @@ class UserEngine {
   UserInfo* GetUser(UserId id);
  private:
   UserEngine();
-  ~UserEngine();
   DISALLOW_COPY_AND_ASSIGN(UserEngine);
  private:
+  bool initialized_;
   UserIdMap user_id_map_;
 };
 

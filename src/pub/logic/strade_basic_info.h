@@ -8,15 +8,18 @@
 #include "logic/base_values.h"
 #include "logic/logic_comm.h"
 #include "storage/mysql_engine.h"
+#include "logic/realtime_code_info.h"
 
 namespace strade_logic {
 
+using stock_logic::StockRealInfo;
+
 class StockHistInfo;
-class StockRealInfo;
 
 typedef std::map<std::string, StockHistInfo> STOCK_HIST_MAP;
 typedef std::map<time_t, StockRealInfo> STOCK_REAL_MAP;
 
+/*
 // 实时数据
 class StockRealInfo {
  public:
@@ -76,6 +79,7 @@ class StockRealInfo {
  private:
   Data* data_;
 };
+*/
 
 // 历史数据
 class StockHistInfo : public base_logic::AbstractDao{

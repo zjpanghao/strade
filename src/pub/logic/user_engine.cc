@@ -12,27 +12,31 @@ using strade_share::SSEngine;
 
 namespace strade_user {
 
-UserEngine::UserEngine() {
+UserEngine::UserEngine()
+    : initialized_(false) {
 }
 
 UserEngine::~UserEngine() {
 }
 
 bool UserEngine::Init() {
+  if (initialized_) {
+    return true;
+  }
+  initialized_ = true;
   SSEngine* engine = GetStradeShareEngine();
-  std::vector<MYSQL_ROW> rows;
-  if (!engine->ReadDataRows(UserInfo::kGetAllUserInfoSql, rows)) {
+  std::vector<UserInfo> users;
+  if (!engine->ReadData(UserInfo::kGetAllUserInfoSql, users)) {
     LOG_ERROR("init user info error");
     return false;
   }
-  for (size_t i = 0; i < rows.size(); ++i) {
-    UserInfo user;
-    if (!user.Init(rows[i])) {
+  for (size_t i = 0; i < users.size(); ++i) {
+    if (!users[i].Init()) {
       continue;
     }
-    user_id_map_.insert(UserIdMap::value_type(user.id(), user));
+    user_id_map_.insert(UserIdMap::value_type(users[i].id(), users[i]));
   }
-  LOG_MSG2("init %d user info", rows.size());
+  LOG_MSG2("init %d user info", users.size());
   return true;
 }
 
