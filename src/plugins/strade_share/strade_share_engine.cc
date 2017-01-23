@@ -3,7 +3,10 @@
 //
 
 #include "strade_share_engine.h"
+
+#ifdef KUN_REDIS_POOL
 #include "dic/base_dic_redis_auto.h"
+#endif
 
 #define DEFAULT_CONFIG_PATH  "./strade_share/stradeshare_config.xml"
 
@@ -60,7 +63,10 @@ bool SSEngineImpl::InitParam() {
   }
   strade_share_db_ = new StradeShareDB(config);
   LoadAllStockBasicInfo();
-  assert(base_dic::KunDicPool::GetInstance()->Init(config->redis_list_, 100));
+#ifdef KUN_REDIS_POOL
+  assert(base_dic::KunDicPool::GetInstance()->Init(
+      config->redis_list_, 100));
+#endif
   return true;
 }
 
