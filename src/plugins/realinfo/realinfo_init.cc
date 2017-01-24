@@ -1,4 +1,4 @@
-// author: tianyiheng
+// author: pangh
 // date: Mon Jun 20 16:50:31 2016
 
 #include "realinfo_init.h"
@@ -33,16 +33,16 @@ static handler_t OnRealInfoShutdown(struct server* srv, void* pd) {
 }
 
 static handler_t OnRealInfoConnect(struct server *srv, int fd, void *data,
-                                      int len) {
+                                   int len) {
   return HANDLER_GO_ON;
 }
 
 static handler_t OnRealInfoMessage(struct server *srv, int fd, void *data,
-                                      int len) {
+                                   int len) {
   if (realinfo::RealInfoLogic::GetInstance()->OnRealInfoMessage(srv,
-                                                                         fd,
-                                                                         data,
-                                                                         len)) {
+                                                                fd,
+                                                                data,
+                                                                len)) {
     return HANDLER_FINISHED;
   }
   return HANDLER_GO_ON;
@@ -59,7 +59,6 @@ static handler_t OnUnknow(struct server *srv, int fd, void *data, int len) {
 
 static handler_t OnBroadcastConnect(struct server* srv, int fd, void *data,
                                     int len) {
-
   return HANDLER_GO_ON;
 }
 
@@ -70,7 +69,6 @@ static handler_t OnBroadcastClose(struct server* srv, int fd) {
 
 static handler_t OnBroadcastMessage(struct server* srv, int fd, void *data,
                                     int len) {
-
   return HANDLER_GO_ON;
 }
 
@@ -81,8 +79,7 @@ static handler_t OnIniTimer(struct server* srv) {
 
 static handler_t OnTimeOut(struct server* srv, char* id, int opcode, int time) {
   realinfo::RealInfoLogic::GetInstance()->OnTimeout(srv, id, opcode,
-                                                          time);
-
+                                                    time);
   return HANDLER_GO_ON;
 }
 

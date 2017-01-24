@@ -28,6 +28,7 @@ class RealInfoCache {
     std::string result = "realinfolatest:";
     return result + code;
   }
+
  private:
   std::string pool_key_;
 };

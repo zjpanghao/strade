@@ -43,11 +43,6 @@ struct StockDealNInfo {
   std::list<StockDealInfo> buy;
   std::list<StockDealInfo> sell;
 };
-struct MarketIndexInfo {
-  double sh_index;
-  double sz_index;
-  double hs_index;
-};
 
 class SendRealInfoLatestProtocol {
  public:
@@ -92,7 +87,7 @@ class SendRealInfoLatestProtocol {
   }
 
   void AddDealNGroup(std::wstring group_name, const std::list<StockDealInfo> &result,
-                base_logic::DictionaryValue* root) {
+                     base_logic::DictionaryValue* root) {
     std::list<StockDealInfo>::const_iterator it = result.begin();
     base_logic::ListValue* list = new base_logic::ListValue();
     while (it != result.end()) {
@@ -168,7 +163,6 @@ class SendRealInfoLatestProtocol {
   }
 
  private:
-  RealInfoRequestInterval request_interval_;
   scoped_ptr<NetBase> result_;
   StockDealNInfo deal_info_;
   StockRealInfo real_info_;

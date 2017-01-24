@@ -85,4 +85,4 @@ int RealInfoCache::GetRealInfoIndexCache(std::string *value) {
   return -1;
 }
 
-}  // namespace realinfo {
+}  // namespace realinfo 

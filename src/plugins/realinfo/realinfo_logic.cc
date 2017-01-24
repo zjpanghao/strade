@@ -11,8 +11,6 @@
 #include "net/operator_code.h"
 #include "realinfo/realinfo_cache.h"
 #include "realinfo/realinfo_pro.h"
-//#include "realinfo/src/realinfo_singlestock.h"
-//#include "realinfo/src/realinfo_compositeindex.h"
 #include "dic/base_dic_redis_auto.h"
 #include "strade_share/strade_share_engine.h"
 #include <sstream>
@@ -20,22 +18,23 @@
 #define DEFAULT_CONFIG_PATH                    "./plugins/realinfo/realinfo_config.xml"
 #define TIME_REALINFO_UPDATE_ALL                          10000
 #define SEND_HTTP_ERROR(b) \  
-do {
-  std::string response = b;
-  base_logic::LogicUnit::SendMessageBySize(socket, response);
+do {\
+  std::string response = b;\
+  base_logic::LogicUnit::SendMessageBySize(socket, response);\
 }while(0)
 
 #define SEND_ERROR_INFO(c, i) \  
-do {
-  SendRealInfoLatestProtocol error_pro;
-  error_pro.SetErrorState(c, i);
-  std::string response = error_pro.GetJson();
-  base_logic::LogicUnit::SendMessageBySize(socket, response);
+do {\
+  SendRealInfoLatestProtocol error_pro;\
+  error_pro.SetErrorState(c, i);\
+  std::string response = error_pro.GetJson();\
+  base_logic::LogicUnit::SendMessageBySize(socket, response);\
 }while(0)
+
 #define SEND_HTTP_INFO(b) \  
-do {
-  std::string response = b;
-  base_logic::LogicUnit::SendMessageBySize(socket, response);
+do {\
+  std::string response = b;\
+  base_logic::LogicUnit::SendMessageBySize(socket, response);\
 }while(0)
 
 namespace realinfo {
@@ -60,7 +59,6 @@ bool RealInfoLogic::Init() {
     return false;
   }
   r = config->LoadConfig(path);
-  // assert(base_dic::KunDicPool::GetInstance()->Init(config->redis_list_, 100));
   return true;
 }
 
@@ -92,17 +90,14 @@ bool RealInfoLogic::OnRealInfoMessage(struct server *srv, const int socket,
     std::string http_str(packet, len);
     std::string error_str;
     int error_code = 0;
-    scoped_ptr < base_logic::ValueSerializer
-        > serializer(
-            base_logic::ValueSerializer::Create(base_logic::IMPL_HTTP,
-                                                &http_str));
+    scoped_ptr < base_logic::ValueSerializer> serializer(
+        base_logic::ValueSerializer::Create(base_logic::IMPL_HTTP,
+                                            &http_str));
     NetBase* value = (NetBase*) (serializer.get()->Deserialize(&error_code,
                                                                &error_str));
     LOG_DEBUG2("http_str:%s", http_str.c_str());
     if (NULL == value) {
       error_code = STRUCT_ERROR;
-      // send_error(error_code, socket);
-      LOG_MSG("error struct ");
       SEND_ERROR_INFO(STRUCT_ERROR, "error struct");
       r = true;
       break;
@@ -147,7 +142,6 @@ bool RealInfoLogic::OnBroadcastClose(struct server *srv, const int socket) {
 
 bool RealInfoLogic::OnIniTimer(struct server *srv) {
   if (srv->add_time_task != NULL) {
-    srv->add_time_task(srv, "realinfo", TIME_REALINFO_UPDATE_ALL, 600, -1);
   }
   return true;
 }
@@ -155,19 +149,11 @@ bool RealInfoLogic::OnIniTimer(struct server *srv) {
 bool RealInfoLogic::OnTimeout(struct server *srv, char *id, int opcode,
                               int time) {
   if (opcode == TIME_REALINFO_UPDATE_ALL) {
-    LOG_MSG("Update realinfo");
   }
   return true;
 }
 
-//bool RealInfoLogic::GetStockData(
-//    const strade_share::STOCK_HIST_MAP &share_map,
-//    STOCK_HISTORY_MAP *history_map) {
-//  return true;
-//}
-
 static StockDealNInfo get_test_data() {
-
   StockDealNInfo info;
   for (int i = 0; i < 5; i++) {
     StockDealInfo a = { 1.0 + i, 200 * (i + 1) };
@@ -214,9 +200,8 @@ std::string RealInfoLogic::GetStradeDay(time_t stamp) {
 
 bool RealInfoLogic::CheckCacheDataValid(const std::string &cache_result) {
   std::string result = cache_result;
-  scoped_ptr < base_logic::ValueSerializer
-      > serializer(
-          base_logic::ValueSerializer::Create(base_logic::IMPL_JSON, &result));
+  scoped_ptr < base_logic::ValueSerializer> serializer(
+      base_logic::ValueSerializer::Create(base_logic::IMPL_JSON, &result));
   int error_code;
   std::string error_str;
   NetBase *dic = (NetBase*) serializer->Deserialize(&error_code, &error_str);
@@ -306,15 +291,6 @@ bool RealInfoLogic::OnSingleStockLatestRecords(struct server *srv,
 #endif
   info = get_test_data();
   StockRealInfo real_info = get_test_real_data();
-#if 1 
-#if 0
-  if (engine_->GetStockHistInfoByDate(
-          stock_code, GetStradeDay(time(NULL) - 86400), his_info) == false) {
-    LOG_MSG2("get his info error %s", GetStradeDay(time(NULL) - 86400).c_str());
-    SEND_ERROR_INFO(NULL_DATA, "get his info error");
-    return false;
-  }
-#endif
   strade_logic::STOCK_HIST_MAP hist_map = engine_->GetStockHistMapByCodeCopy(
       stock_code);
   if (hist_map.size() == 0) {
@@ -332,8 +308,6 @@ bool RealInfoLogic::OnSingleStockLatestRecords(struct server *srv,
     real_info.yesterday_close_price = his_info.get_close();
   }
 
-#endif
-  //LOG_MSG2("HIHI %.2f", his_info.get_close()); 
   candle_pro.set_latest_info(info, real_info);
   std::string json = candle_pro.GetJson();
   LOG_MSG2("The json %s\n", json.c_str());
