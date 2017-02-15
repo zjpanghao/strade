@@ -19,6 +19,7 @@ typedef uint32 PlatformId;
 typedef uint32 UserLevel;
 typedef uint32 OrderId;
 
+#define INVALID_USERID      ((UserId)-1)
 #define INVALID_GROUPID     ((GroupId)-1)
 
 typedef std::vector<std::string> StockCodeList;

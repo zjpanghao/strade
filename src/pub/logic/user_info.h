@@ -7,8 +7,6 @@
 #include <vector>
 #include <map>
 
-#include <mysql.h>
-
 #include "macros.h"
 #include "user_defined_types.h"
 #include "stock_group.h"
@@ -17,6 +15,7 @@
 #include "stock_position.h"
 #include "message.h"
 #include "thread/base_thread_lock.h"
+#include "dao/abstract_dao.h"
 
 namespace strade_user {
 
@@ -24,7 +23,7 @@ class UserInfo;
 typedef std::vector<UserInfo> UserList;
 typedef std::map<UserId, UserInfo> UserIdMap;
 
-class UserInfo {
+class UserInfo : public base_logic::AbstractDao {
  public:
   static const char kGetAllUserInfoSql[];
   enum {
@@ -42,19 +41,21 @@ class UserInfo {
   UserInfo();
   REFCOUNT_DECLARE(UserInfo);
  public:
-  bool Init(const MYSQL_ROW row);
+  bool Init();
   Status::State CreateGroup(const std::string& name,
                       StockCodeList& code_list,
                       GroupId* id);
 
   StockGroup* GetGroup(GroupId group_id);
+
+  // not include default group
   GroupStockPositionList GetAllGroupStockPosition();
   GroupStockPosition* GetGroupStockPosition(GroupId group_id, const std::string& code);
-
   Status::State AddStock(GroupId group_id, StockCodeList& code_list);
   Status::State DelStock(GroupId group_id, StockCodeList& code_list);
   StockGroupList GetAllGroups() const { return data_->stock_group_list_; }
   Status::State GetGroupStock(GroupId group_id, StockCodeList& stocks);
+  // include default gruop
   GroupStockPositionList GetHoldingStocks();
 
   OrderList FindOrders(const OrderFilterList& filters);
@@ -63,6 +64,7 @@ class UserInfo {
   Status::State OnCancelOrder(OrderId order_id);
 
  private:
+  void Deserialize();
   bool InitStockGroup();
   bool InitStockPosition();
   bool InitOrder();
@@ -90,6 +92,7 @@ class UserInfo {
   double available_capital() const { return data_->available_capital_; }
   void set_available_capital(double available_capital) { data_->available_capital_ = available_capital; }
 
+  bool initialized() const { return data_->initialized_; }
  private:
   class Data {
    public:
@@ -101,7 +104,8 @@ class UserInfo {
           level_(-1),
           available_capital_(0.0),
           frozen_capital_(0.0),
-          lock_(NULL) {
+          lock_(NULL),
+          initialized_(false) {
       InitThreadrw(&lock_);
     }
 
@@ -118,6 +122,7 @@ class UserInfo {
     std::string phone_;
     std::string email_;
 
+    bool initialized_;
     double available_capital_;  // 可用资金
     double frozen_capital_;     // 冻结资金
 

@@ -21,7 +21,7 @@ CUSTOM_THIRD_PATH = $(LIB_DIR)/third_party
 LINK_PATHS = -L./ -L/usr/local/libmemcached-1.0.7/lib/  -L/usr/local/lib -L/usr/lib64/mysql
 
 # Flags passed to the preprocessor.
-CPPFLAGS += -isystem -shared -fPIC -_DB_POOL_ -D_DB_POOL_ -D_DEBUG -DUSR_LOG_MSG -DPROCESS_WORK -DKUN_REDIS_POOL
+CPPFLAGS += -isystem -shared -fPIC -_DB_POOL_ -D_DB_POOL_ -D_DEBUG -DUSR_LOG_MSG -DUSR_LOG_ERROR -DPROCESS_WORK -DKUN_REDIS_POOL
 
 # Flags passed to the C++ compiler.
 CXXFLAGS += -g  -Wextra -pthread -shared -fPIC
@@ -109,8 +109,23 @@ subject.o : $(USER_DIR)/logic/subject.cc $(USER_DIR)/logic/subject.h
 abstract_dao.o : $(USER_DIR)/dao/abstract_dao.cc $(USER_DIR)/dao/abstract_dao.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/dao/abstract_dao.cc $(INCLUDE_PATHS)
 
+user_engine.o : ./$(USER_DIR)/logic/user_engine.cc ./$(USER_DIR)/logic/user_engine.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./$(USER_DIR)/logic/user_engine.cc $(INCLUDE_PATHS)
+
+user_info.o : ./$(USER_DIR)/logic/user_info.cc ./$(USER_DIR)/logic/user_info.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./$(USER_DIR)/logic/user_info.cc $(INCLUDE_PATHS)
+
+stock_group.o : ./$(USER_DIR)/logic/stock_group.cc ./$(USER_DIR)/logic/stock_group.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./$(USER_DIR)/logic/stock_group.cc $(INCLUDE_PATHS)
+
+stock_position.o : ./$(USER_DIR)/logic/stock_position.cc ./$(USER_DIR)/logic/stock_position.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./$(USER_DIR)/logic/stock_position.cc $(INCLUDE_PATHS)
+
+order_info.o : ./$(USER_DIR)/logic/order_info.cc ./$(USER_DIR)/logic/order_info.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./$(USER_DIR)/logic/order_info.cc $(INCLUDE_PATHS)
+		
 $(PLUGIN) : basictypes.o config.o strade_share_engine.o strade_share_db.o strade_basic_info.o mysql_engine.o\
-	observer.o subject.o abstract_dao.o\
+	observer.o subject.o abstract_dao.o user_engine.o user_info.o stock_group.o stock_position.o order_info.o\
 	$(CUSTOM_THIRD_PATH)/dmg_fp/lib/dmg_fp.a $(LIB_DIR)/base/lib/mybase.a $(LIB_DIR)/third_party/lib/libhiredis.a
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LINK_PATHS)  -lpthread -lexpat -lrt -ldl -lmysqlclient \
 	$^  -o $@ -lexpat -lmysqlclient

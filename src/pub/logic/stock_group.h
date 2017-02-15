@@ -11,10 +11,11 @@
 
 #include "macros.h"
 #include "user_defined_types.h"
+#include "dao/abstract_dao.h"
 
 namespace strade_user {
 
-class StockGroup {
+class StockGroup : public base_logic::AbstractDao {
  public:
   enum Status {
     INVALID,
@@ -40,7 +41,8 @@ class StockGroup {
   bool exist_stock(const std::string& code) const {
     return data_->stock_set_.count(code);
   }
-
+ private:
+  void Deserialize();
  public:
   void set_id(UserId id) { data_->id_ = id; }
   UserId id() const { return data_->id_; }
@@ -48,6 +50,7 @@ class StockGroup {
   void set_name(const std::string& name) { data_->name_ = name; }
   std::string name() const { return data_->name_; }
   Status status() const { return data_->status_; }
+  bool initialized() const { return data_->initialized_; }
  public:
   class Data {
    public:
@@ -55,7 +58,8 @@ class StockGroup {
         : refcount_(1),
           id_(0),
           user_id_(0),
-          status_(VALID) {
+          status_(VALID),
+          initialized_(false) {
     }
 
    public:
@@ -63,6 +67,7 @@ class StockGroup {
     UserId user_id_;
     std::string name_;
     Status status_;
+    bool initialized_;
     StockCodeList stock_list_;
     StockCodeSet stock_set_;
 

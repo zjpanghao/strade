@@ -53,6 +53,7 @@ UserLogic::UserLogic() {
   if (engine == NULL)
     assert(0);
   engine->Init();
+  LOG_DEBUG2("engine: %p", engine);
 }
 
 UserLogic::~UserLogic() {
@@ -108,7 +109,7 @@ bool UserLogic::SendResponse(int socket, Status& status) {
 
 bool UserLogic::SendResponse(int socket, ResHead& msg) {
   DictionaryValue dict;
-  if (!msg.Serialize(dict)) {
+  if (!msg.StartSerialize(dict)) {
     LOG_ERROR("serialize response msg error");
     return false;
   }
