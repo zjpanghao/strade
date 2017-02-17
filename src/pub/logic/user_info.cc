@@ -33,15 +33,12 @@ void UserInfo::Deserialize() {
   GetInteger(USER_LEVEL, data_->level_);
   GetString(EMAIL, data_->email_);
   GetString(PHONE, data_->phone_);
-  GetReal(AVAILABLE_CAPITAL, data_->available_capital_);
-  GetReal(FROZEN_CAPITAL, data_->frozen_capital_);
 
   data_->initialized_ = true;
   LOG_DEBUG2("init user:%d, name:%s, passwd:%s, platform_id:%d, user_level:%d, "
-      "email:%s, phone:%s, available_capital:%lf, frozen_capital:%lf",
+      "email:%s, phone:%s",
       data_->id_, data_->name_.data(), data_->password_.data(), data_->platform_id_,
-      data_->level_, data_->email_.data(), data_->phone_.data(),
-      data_->available_capital_, data_->frozen_capital_);
+      data_->level_, data_->email_.data(), data_->phone_.data());
 }
 
 bool UserInfo::Init() {
@@ -300,7 +297,8 @@ GroupStockPosition* UserInfo::GetGroupStockPosition(GroupId group_id,
   }
 
   for (size_t i = 0; i < data_->stock_position_list_.size(); ++i) {
-    if (data_->stock_position_list_[i].group_id() == group_id) {
+    if (data_->stock_position_list_[i].group_id() == group_id
+        && data_->stock_position_list_[i].code() == code) {
       return &data_->stock_position_list_[i];
     }
   }
@@ -322,17 +320,18 @@ Status::State UserInfo::OnBuyOrder(SubmitOrderReq& req, double* frozen) {
 
   need += round_commission + transfer_fee;
 
-  if (need > data_->available_capital_) {
+  StockGroup* g = GetGroup(req.group_id);
+  assert(NULL != g);
+  if (need > g->available_capital()) {
     LOG_ERROR2("available capital not enough, "
         "available_capital:%lf, need:%lf",
-        data_->available_capital_, need);
+        g->available_capital(), need);
     return Status::CAPITAL_NOT_ENOUGH;
   }
 
   *frozen = need;
   // frozen commitment
-  data_->available_capital_ -= need;
-  data_->frozen_capital_ += need;
+  g->OnDelegateBuyOrderDelegate(need);
   return Status::SUCCESS;
 }
 
@@ -437,9 +436,9 @@ Status::State UserInfo::SubmitOrder(SubmitOrderReq& req) {
 }
 
 bool UserInfo::OnBuyOrderDone(OrderInfo* order) {
-  data_->frozen_capital_ -= order->frozen();
-  data_->available_capital_ += order->frozen() - order->amount();
-  order->set_available_capital(data_->available_capital_);
+  StockGroup* g = GetGroup(order->group_id());
+  assert(g != NULL);
+  order->set_available_capital(g->available_capital());
 
   // update mysql
   std::ostringstream oss;
@@ -451,7 +450,7 @@ bool UserInfo::OnBuyOrderDone(OrderInfo* order) {
       << order->commission() << ","
       << order->transfer_fee() << ","
       << order->amount() << ","
-      << data_->available_capital_ << ")";
+      << g->available_capital() << ")";
 
   MYSQL_ROWS_VEC row;
   SSEngine* engine = GetStradeShareEngine();
@@ -512,13 +511,15 @@ bool UserInfo::OnBuyOrderDone(OrderInfo* order) {
 }
 
 bool UserInfo::OnSellOrderDone(OrderInfo* order) {
+  StockGroup* g = GetGroup(order->group_id());
+  assert(g != NULL);
   // update user available capital
   double profit = order->deal_price()*order->deal_num();
   profit -= order->stamp_duty();
   profit -= order->transfer_fee();
   profit -= order->commission();
-  data_->available_capital_ += profit;
-  order->set_available_capital(data_->available_capital_);
+  g->OnSellOrderDone(profit);
+  order->set_available_capital(g->available_capital());
 
   // pick FakeStockPosition
   FakeStockPositionList fp_list;
@@ -592,8 +593,9 @@ Status::State UserInfo::OnCancelBuyOrder(const OrderInfo* order) {
   base_logic::WLockGd lock(data_->lock_);
 
   // update user available capital and frozen capital
-  data_->available_capital_ += order->frozen();
-  data_->frozen_capital_ -= order->frozen();
+  StockGroup* g = GetGroup(order->group_id());
+  assert(g != NULL);
+  g->OnCancelBuyOrder(order->frozen());
 
   // update mysql
   // 1. update delegation_record
@@ -652,6 +654,31 @@ Status::State UserInfo::OnCancelOrder(OrderId order_id) {
   // remove order
   data_->order_list_.erase(order);
   return status;
+}
+
+Status::State UserInfo::OnModifyInitCapital(GroupId group_id, double capital) {
+  StockGroup* g = GetGroup(group_id);
+  if (NULL == g) {
+    return Status::GROUP_NOT_EXIST;
+  }
+
+  if (capital < 0.0) {
+    return Status::FAILED;
+  }
+  g->add_init_capital(capital);
+
+  // TODO: update mysql
+  std::ostringstream oss;
+  oss << "UPDATE `group_info` "
+      << "SET `initCapital` = " << g->init_capital() << ","
+      << "`availableCapital` = " << g->available_capital()
+      << " WHERE `groupId` = " << g->id() << " AND `userId` = " << data_->id_;
+  SSEngine* engine = GetStradeShareEngine();
+  if (!engine->WriteData(oss.str())) {
+    LOG_ERROR2("user:%s modify init capital mysql error", data_->name_.data());
+    return Status::MYSQL_ERROR;
+  }
+  return Status::SUCCESS;
 }
 
 } /* namespace strade_user */
