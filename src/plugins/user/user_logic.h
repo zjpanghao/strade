@@ -71,6 +71,7 @@ class UserLogic {
   void OnAvailableStockCount(int socket, DictionaryValue& dict);
   void OnCancelOrder(int socket, DictionaryValue& dict);
   void OnProfitAndLossOrderNum(int socket, DictionaryValue& dict);
+  void OnModifyInitCapital(int socket, DictionaryValue& dict);
 
   bool SendResponse(int socket, Status& status);
   bool SendResponse(int socket, ResHead& msg);
