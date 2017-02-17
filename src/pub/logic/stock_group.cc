@@ -30,7 +30,8 @@ REFCOUNT_DEFINE(StockGroup)
 
 std::string StockGroup::GetUserGroupSql(UserId user_id) {
   std::ostringstream oss;
-  oss << "SELECT `groupId`, `groupName`, `status`"
+  oss << "SELECT `groupId`, `groupName`, `status`, "
+      "`availableCapital`, `frozenCapital`, `initCapital` "
       "FROM `group_info` "
       "WHERE "
       << "`userId` = " << user_id << " AND " << "`status` != 0";
@@ -73,6 +74,10 @@ void StockGroup::Deserialize() {
   GetString(1, data_->name_);
   GetInteger(2, t);
   data_->status_ = (Status) t;
+
+  GetReal(3, data_->available_capital_);
+  GetReal(4, data_->frozen_capital_);
+  GetReal(5, data_->init_capital_);
 
   data_->initialized_ = true;
 }
