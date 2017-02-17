@@ -165,6 +165,7 @@ struct QueryStocksRes : ResHead {
 struct QueryHoldingStocksReq : ReqHead {
   const static uint32 ID = 106;
 
+  GroupId group_id;
   bool Deserialize(DictionaryValue& dict);
   void Dump(std::ostringstream& oss);
 
@@ -192,6 +193,7 @@ struct QueryHoldingStocksRes : ResHead {
 // query today orders
 struct QueryTodayOrdersReq : ReqHead {
   const static uint32 ID = 107;
+  GroupId group_id;
 
   bool Deserialize(DictionaryValue& dict);
   void Dump(std::ostringstream& oss);
@@ -219,6 +221,7 @@ struct QueryTodayOrdersRes : ResHead {
 struct QueryTodayFinishedOrdersReq : ReqHead {
   const static uint32 ID = 108;
 
+  GroupId group_id;
   bool Deserialize(DictionaryValue& dict);
   void Dump(std::ostringstream& oss);
 };
@@ -243,6 +246,7 @@ struct QueryTodayFinishedOrdersRes : ResHead {
 struct QueryHistoryFinishedOrdersReq : ReqHead {
   const static uint32 ID = 109;
 
+  GroupId group_id;
   std::string begin_time;
   std::string end_time;
 
@@ -269,6 +273,7 @@ struct QueryHistoryFinishedOrdersRes : ResHead {
 // query statement
 struct QueryStatementReq : ReqHead {
   const static uint32 ID = 110;
+  GroupId group_id;
   std::string begin_time;
   std::string end_time;
 
@@ -343,6 +348,7 @@ struct GroupStockHoldingRes : ResHead {
 struct AvailableStockCountReq : ReqHead {
   const static uint32 ID = 113;
 
+  GroupId group_id;
   std::string code;
 
   bool Deserialize(DictionaryValue& dict);
@@ -367,6 +373,7 @@ struct CancelOrderReq : ReqHead {
 
 struct ProfitAndLossOrderNumReq : ReqHead {
   const static uint32 ID = 115;
+  GroupId group_id;
 
   bool Deserialize(DictionaryValue& dict);
   void Dump(std::ostringstream& oss);
@@ -375,6 +382,22 @@ struct ProfitAndLossOrderNumReq : ReqHead {
 struct ProfitAndLossOrderNumRes : ResHead {
   uint32 profit_num;
   uint32 loss_num;
+  bool Serialize(DictionaryValue& dict);
+};
+
+///////////////////////////////////////////////////////////////////////////////
+struct ModifyInitCapitalReq : ReqHead {
+  const static uint32 ID = 116;
+
+  GroupId group_id;
+  double capital;
+
+  bool Deserialize(DictionaryValue& dict);
+  void Dump(std::ostringstream& oss);
+};
+
+struct ModifyInitCapitalRes : ResHead {
+  double capital;
   bool Serialize(DictionaryValue& dict);
 };
 

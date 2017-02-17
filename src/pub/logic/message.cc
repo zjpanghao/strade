@@ -232,11 +232,18 @@ bool QueryStocksRes::Serialize(DictionaryValue& dict) {
 }
 ///////////////////////////////////////////////////////////////////////////////
 bool QueryHoldingStocksReq::Deserialize(DictionaryValue& dict) {
+  int64 t;
+  if (!dict.GetBigInteger(L"group_id", &t)) {
+    LOG_ERROR("NOT FIND group_id");
+    return false;
+  }
+  group_id = t;
   return true;
 }
 
 void QueryHoldingStocksReq::Dump(std::ostringstream& oss) {
   oss << "\t\t--------- QueryHoldingStocksReq ---------" << std::endl;
+  OSS_WRITE(group_id);
 }
 
 bool QueryHoldingStocksRes::StockInfo::Serialize(DictionaryValue& dict) {
@@ -265,11 +272,18 @@ bool QueryHoldingStocksRes::Serialize(DictionaryValue& dict) {
 
 ///////////////////////////////////////////////////////////////////////////////
 bool QueryTodayOrdersReq::Deserialize(DictionaryValue& dict) {
+  int64 t;
+  if (!dict.GetBigInteger(L"group_id", &t)) {
+    LOG_ERROR("NOT FIND gruop_id");
+    return false;
+  }
+  group_id = t;
   return true;
 }
 
 void QueryTodayOrdersReq::Dump(std::ostringstream& oss) {
   oss << "\t\t--------- QueryTodayOrdersReq ---------" << std::endl;
+  OSS_WRITE(group_id);
 }
 
 bool QueryTodayOrdersRes::OrderInfo::Serialize(DictionaryValue& dict) {
@@ -296,11 +310,18 @@ bool QueryTodayOrdersRes::Serialize(DictionaryValue& dict) {
 }
 ///////////////////////////////////////////////////////////////////////////////
 bool QueryTodayFinishedOrdersReq::Deserialize(DictionaryValue& dict) {
+  int64 t;
+  if (!dict.GetBigInteger(L"group_id", &t)) {
+    LOG_ERROR("NOT FIND gruop_id");
+    return false;
+  }
+  group_id = t;
   return true;
 }
 
 void QueryTodayFinishedOrdersReq::Dump(std::ostringstream& oss) {
   oss << "\t\t--------- QueryTodayFinishedOrdersReq ---------" << std::endl;
+  OSS_WRITE(group_id);
 }
 
 bool QueryTodayFinishedOrdersRes::OrderInfo::Serialize(DictionaryValue& dict) {
@@ -325,11 +346,28 @@ bool QueryTodayFinishedOrdersRes::Serialize(DictionaryValue& dict) {
 }
 ///////////////////////////////////////////////////////////////////////////////
 bool QueryHistoryFinishedOrdersReq::Deserialize(DictionaryValue& dict) {
+  if (!dict.GetString(L"begin_time", &begin_time)) {
+    LOG_ERROR("NOT FIND begin_time");
+    return false;
+  }
+  if (!dict.GetString(L"end_time", &end_time)) {
+    LOG_ERROR("NOT FIND end_time");
+    return false;
+  }
+  int64 t;
+  if (!dict.GetBigInteger(L"group_id", &t)) {
+    LOG_ERROR("NOT FIND group_id");
+    return false;
+  }
+  group_id = t;
   return true;
 }
 
 void QueryHistoryFinishedOrdersReq::Dump(std::ostringstream& oss) {
   oss << "\t\t--------- QueryHistoryFinishedOrdersReq ---------" << std::endl;
+  OSS_WRITE(begin_time);
+  OSS_WRITE(end_time);
+  OSS_WRITE(group_id);
 }
 
 bool QueryHistoryFinishedOrdersRes::OrderInfo::Serialize(DictionaryValue& dict) {
@@ -364,11 +402,18 @@ bool QueryStatementReq::Deserialize(DictionaryValue& dict) {
     return false;
   }
 
+  int64 t;
+  if (!dict.GetBigInteger(L"group_id", &t)) {
+    LOG_ERROR("NOT FIND group_id");
+    return false;
+  }
+  group_id = t;
   return true;
 }
 
 void QueryStatementReq::Dump(std::ostringstream& oss) {
   oss << "\t\t--------- QueryStatementReq ---------" << std::endl;
+  OSS_WRITE(group_id);
   OSS_WRITE(begin_time);
   OSS_WRITE(end_time);
 }
@@ -485,6 +530,13 @@ bool GroupStockHoldingRes::Serialize(DictionaryValue& dict) {
 }
 ///////////////////////////////////////////////////////////////////////////////
 bool AvailableStockCountReq::Deserialize(DictionaryValue& dict) {
+  int64 t;
+  if (!dict.GetBigInteger(L"group_id", &t)) {
+    LOG_ERROR("NOT FIND group_id");
+    return false;
+  }
+  group_id = t;
+
   if (!dict.GetString(L"code", &code)) {
     LOG_ERROR("NOT FIND code");
     return false;
@@ -494,6 +546,8 @@ bool AvailableStockCountReq::Deserialize(DictionaryValue& dict) {
 
 void AvailableStockCountReq::Dump(std::ostringstream& oss) {
   oss << "\t\t--------- AvailableStockCountReq ---------" << std::endl;
+  OSS_WRITE(group_id);
+  OSS_WRITE(code);
 }
 
 bool AvailableStockCountRes::Serialize(DictionaryValue& dict) {
@@ -520,16 +574,51 @@ void CancelOrderReq::Dump(std::ostringstream& oss) {
 
 ///////////////////////////////////////////////////////////////////////////////
 bool ProfitAndLossOrderNumReq::Deserialize(DictionaryValue& dict) {
+  int64 t;
+  if (!dict.GetBigInteger(L"group_id", &t)) {
+    LOG_ERROR("NOT FIND group_id");
+    return false;
+  }
+  group_id = t;
   return true;
 }
 
 void ProfitAndLossOrderNumReq::Dump(std::ostringstream& oss) {
   oss << "\t\t--------- ProfitAndLossOrderNumReq ---------" << std::endl;
+  OSS_WRITE(group_id);
 }
 
 bool ProfitAndLossOrderNumRes::Serialize(DictionaryValue& dict) {
   dict.SetBigInteger(L"profit_num", profit_num);
   dict.SetBigInteger(L"loss_num", loss_num);
+  return true;
+}
+///////////////////////////////////////////////////////////////////////////////
+
+bool ModifyInitCapitalReq::Deserialize(DictionaryValue& dict) {
+  int64 t;
+  if (!dict.GetBigInteger(L"group_id", &t)) {
+    LOG_ERROR("NOT FIND group_id");
+    return false;
+  }
+  group_id = t;
+
+  if (!dict.GetReal(L"capital", &capital)) {
+    LOG_ERROR("NOT FIND capital");
+    return false;
+  }
+
+  return true;
+}
+
+void ModifyInitCapitalReq::Dump(std::ostringstream& oss) {
+  oss << "\t\t--------- AddInitCapital ---------" << std::endl;
+  OSS_WRITE(group_id);
+  OSS_WRITE(capital);
+}
+
+bool ModifyInitCapitalRes::Serialize(DictionaryValue& dict) {
+  dict.SetReal(L"capital", capital);
   return true;
 }
 ///////////////////////////////////////////////////////////////////////////////
