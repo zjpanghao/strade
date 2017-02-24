@@ -9,9 +9,9 @@
 #include "logic/logic_comm.h"
 #include "strade_share/strade_share_engine.h"
 
-using strade_share::SSEngine;
-
 namespace strade_user {
+
+SSEngine* StockGroup::engine_ = NULL;
 
 StockGroup::StockGroup() {
   data_ = new Data();
@@ -55,8 +55,7 @@ GroupId StockGroup::CreateGroup(UserId user_id,
       << (int)status << ")";
 
   MYSQL_ROWS_VEC row;
-  SSEngine* engine = GetStradeShareEngine();
-  if (!engine->ExcuteStorage(1, oss.str(), row)) {
+  if (!engine_->ExcuteStorage(1, oss.str(), row)) {
     LOG_ERROR2("user:%d create stock group error", user_id);
     return INVALID_GROUPID;
   }
@@ -119,18 +118,22 @@ bool StockGroup::AddStocks(StockCodeList& stocks) {
     s.push_back(stocks[i]);
   }
 
+  if (s.empty()) {
+    return true;
+  }
+
   // update mysql
   std::ostringstream oss;
-  oss << "INSERT INTO `group_stock`(`groupId`, `stockCode`) VALUES";
+  oss << "REPLACE INTO `group_stock`(`groupId`, `stockCode`, `addTime`) VALUES";
   for (size_t i = 0; i < s.size(); ++i) {
-    oss << "(" << data_->id_ << ",'" << s[i] << "'),";
+    oss << "(" << data_->id_ << ",'" << s[i] << "', NOW()),";
   }
   std::string sql = oss.str();
   sql.erase(sql.size()-1);
   LOG_DEBUG2("add stock list sql: %s", sql.data());
 
-  SSEngine* engine = GetStradeShareEngine();
-  if (!engine->WriteData(sql)) {
+//  SSEngine* engine = GetStradeShareEngine();
+  if (!engine_->WriteData(sql)) {
     rc = false;
     LOG_ERROR2("user:%d add stock to group:%s error",
                data_->user_id_, data_->name_.data());
@@ -180,8 +183,8 @@ bool StockGroup::DelStocks(StockCodeList& stocks) {
   sql.erase(sql.size()-1);
   LOG_DEBUG2("del stock list sql: %s", sql.data());
 
-  SSEngine* engine = GetStradeShareEngine();
-  if (!engine->WriteData(sql)) {
+//  SSEngine* engine = GetStradeShareEngine();
+  if (!engine_->WriteData(sql)) {
     LOG_ERROR2("user:%d del stock to group:%s error",
                data_->user_id_, data_->name_.data());
   }

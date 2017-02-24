@@ -13,10 +13,16 @@
 #include "user_defined_types.h"
 #include "dao/abstract_dao.h"
 
+namespace strade_share {
+class SSEngine;
+}
+using strade_share::SSEngine;
+
 namespace strade_user {
 
 class StockGroup : public base_logic::AbstractDao {
  public:
+  static SSEngine* engine_;
   enum Status {
     INVALID,
     VALID,
