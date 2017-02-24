@@ -113,12 +113,18 @@ class SSEngine {
   // 获取用户对象'
   virtual UserInfo* GetUser(UserId id) = 0;
 
+  // 获取所有用户
+  virtual std::map<UserId, UserInfo> GetUserMap() = 0;
+
   // 添加异步任务, type 表示读，写， 用于用不同的连接
   virtual bool AddMysqlAsyncJob(int column_num,
                                 const std::string& sql,
                                 MysqlCallback callback,
                                 base_logic::MYSQL_JOB_TYPE type,
                                 void* param = NULL) = 0;
+
+  // 获取当前的市场时间
+  virtual time_t market_time() const = 0;
 
  protected:
   StradeShareDB* strade_share_db_;
@@ -200,11 +206,19 @@ class SSEngineImpl : public SSEngine, public strade_logic::Subject {
     return user_engine_->GetUser(id);
   }
 
+  virtual std::map<UserId, UserInfo> GetUserMap() {
+    return user_engine_->GetUserMap();
+  };
+
   virtual bool AddMysqlAsyncJob(int column_num,
                                 const std::string& sql,
                                 MysqlCallback callback,
                                 base_logic::MYSQL_JOB_TYPE type,
                                 void* param = NULL);
+
+  virtual time_t market_time() const {
+    return market_time_;
+  }
 
  private:
   bool GetStockTotalNonBlock(const std::string& stock_code,
@@ -220,6 +234,7 @@ class SSEngineImpl : public SSEngine, public strade_logic::Subject {
   bool InitParam();
 
  private:
+  time_t market_time_;
   threadrw_t* lock_;
   StradeShareCache share_cache_;
 

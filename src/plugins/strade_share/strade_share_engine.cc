@@ -125,6 +125,7 @@ void SSEngineImpl::UpdateStockRealMarketData(
       stock_total_info.AddStockRealInfoByTime(market_time, stock_real_info);
       ++total_count;
     }
+    market_time_ = market_time;
     LOG_DEBUG2("total_count=%d, current_time=%d",
                total_count, market_time);
   }

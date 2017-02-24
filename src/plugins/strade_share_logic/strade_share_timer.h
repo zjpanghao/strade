@@ -7,10 +7,13 @@
 
 #include "strade_share/strade_share_engine.h"
 #include "storage/mysql_engine.h"
+#include "logic/observer.h"
+
+using strade_logic::StockRealInfo;
 
 namespace strade_share_logic {
 
-class StradeShareTimer {
+class StradeShareTimer : public strade_logic::Observer{
  private:
   StradeShareTimer();
 
@@ -19,6 +22,14 @@ class StradeShareTimer {
   bool InitParam();
 
   bool OnTimeLoadStockVisit();
+
+ private:
+  virtual void Update(int opcode);
+  bool JudgeUpdateTodayHist();
+  void WriteStockCurrHistTODB(std::vector<StockRealInfo>& today_hist);
+
+  std::string SerializeStockHistSql(std::stringstream& ss,
+                                    const StockRealInfo& stock_real_info);
 
  private:
   static void OnTimeLoadStockVisitCallback(
