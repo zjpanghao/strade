@@ -51,6 +51,7 @@ class UserInfo : public base_logic::AbstractDao {
   // not include default group
   GroupStockPositionList GetAllGroupStockPosition();
   GroupStockPosition* GetGroupStockPosition(GroupId group_id, const std::string& code);
+  GroupStockPositionList GetGroupStockPosition(GroupId group_id);
   Status::State AddStock(GroupId group_id, StockCodeList& code_list);
   Status::State DelStock(GroupId group_id, StockCodeList& code_list);
   StockGroupList GetAllGroups() const { return data_->stock_group_list_; }
@@ -64,6 +65,7 @@ class UserInfo : public base_logic::AbstractDao {
   Status::State OnCancelOrder(OrderId order_id);
   Status::State OnModifyInitCapital(GroupId group_id, double capital);
  private:
+  StockGroup* GetGroupWithNonLock(GroupId group_id);
   void Deserialize();
   bool InitStockGroup();
   bool InitStockPosition();
@@ -94,7 +96,7 @@ class UserInfo : public base_logic::AbstractDao {
     Data()
         : refcount_(1),
           id_(0),
-          default_gid_(INVALID_GROUPID),
+//          default_gid_(INVALID_GROUPID),
           platform_id_(-1),
           level_(-1),
           lock_(NULL),
@@ -107,7 +109,7 @@ class UserInfo : public base_logic::AbstractDao {
     }
    public:
     UserId id_;
-    GroupId default_gid_;
+//    GroupId default_gid_;
     PlatformId platform_id_;
     UserLevel level_;
     std::string name_;

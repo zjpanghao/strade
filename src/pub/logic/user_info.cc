@@ -56,30 +56,30 @@ bool UserInfo::InitStockGroup() {
     return false;
   }
 
-  bool find_default = false;
+//  bool find_default = false;
   for (size_t i = 0; i < sgs.size(); ++i) {
     if (!(sgs[i].initialized() && sgs[i].InitStockList())) {
       continue;
     }
     data_->stock_group_list_.push_back(sgs[i]);
-    if (sgs[i].status() == StockGroup::DEFAULT) {
-      find_default = true;
-      data_->default_gid_ = sgs[i].id();
-    }
+//    if (sgs[i].status() == StockGroup::DEFAULT) {
+//      find_default = true;
+//      data_->default_gid_ = sgs[i].id();
+//    }
   }
 
-  if (!find_default) {
-    std::string name = "DEFAULT";
-    GroupId group_id = StockGroup::CreateGroup(data_->id_, name, StockGroup::DEFAULT);
-    if (INVALID_GROUPID == group_id) {
-      LOG_ERROR2("user:%s create DEFAULT group error", data_->name_.data());
-      return false;
-    }
-
-    data_->default_gid_ = group_id;
-    StockGroup g(data_->id_, group_id, name);
-    data_->stock_group_list_.push_back(g);
-  }
+//  if (!find_default) {
+//    std::string name = "DEFAULT";
+//    GroupId group_id = StockGroup::CreateGroup(data_->id_, name, StockGroup::DEFAULT);
+//    if (INVALID_GROUPID == group_id) {
+//      LOG_ERROR2("user:%s create DEFAULT group error", data_->name_.data());
+//      return false;
+//    }
+//
+//    data_->default_gid_ = group_id;
+//    StockGroup g(data_->id_, group_id, name);
+//    data_->stock_group_list_.push_back(g);
+//  }
 
   LOG_MSG2("user:%s init %d stock groups", data_->name_.data(), sgs.size());
   return true;
@@ -194,14 +194,23 @@ StockGroup* UserInfo::GetGroup(GroupId group_id) {
   return NULL;
 }
 
+StockGroup* UserInfo::GetGroupWithNonLock(GroupId group_id) {
+  for (size_t i = 0; i < data_->stock_group_list_.size(); ++i) {
+    if (group_id == data_->stock_group_list_[i].id()) {
+      return &data_->stock_group_list_[i];
+    }
+  }
+  return NULL;
+}
+
 Status::State UserInfo::AddStock(GroupId group_id, StockCodeList& code_list) {
   base_logic::WLockGd lock(data_->lock_);
 
-  if (0 == group_id) {
-    group_id = data_->default_gid_;
-  }
+//  if (0 == group_id) {
+//    group_id = data_->default_gid_;
+//  }
 
-  StockGroup *g = GetGroup(group_id);
+  StockGroup *g = GetGroupWithNonLock(group_id);
   if (NULL == g) {
     LOG_ERROR2("user:%s add stock error: group_id:%d not exist",
                data_->name_.data(), group_id);
@@ -218,11 +227,11 @@ Status::State UserInfo::AddStock(GroupId group_id, StockCodeList& code_list) {
 Status::State UserInfo::DelStock(GroupId group_id, StockCodeList& code_list) {
   base_logic::WLockGd lock(data_->lock_);
 
-  if (0 == group_id) {
-    group_id = data_->default_gid_;
-  }
+//  if (0 == group_id) {
+//    group_id = data_->default_gid_;
+//  }
 
-  StockGroup *g = GetGroup(group_id);
+  StockGroup *g = GetGroupWithNonLock(group_id);
   if (NULL == g) {
     LOG_ERROR2("user:%s del stock error: group_id:%d not exist",
                data_->name_.data(), group_id);
@@ -239,9 +248,9 @@ Status::State UserInfo::DelStock(GroupId group_id, StockCodeList& code_list) {
 Status::State UserInfo::GetGroupStock(GroupId group_id, StockCodeList& stocks) {
   base_logic::RLockGd lock(data_->lock_);
 
-  if (0 == group_id) {
-    group_id = data_->default_gid_;
-  }
+//  if (0 == group_id) {
+//    group_id = data_->default_gid_;
+//  }
 
   StockGroup *g = GetGroup(group_id);
   if (NULL == g) {
@@ -305,6 +314,25 @@ GroupStockPosition* UserInfo::GetGroupStockPosition(GroupId group_id,
   return NULL;
 }
 
+GroupStockPositionList UserInfo::GetGroupStockPosition(GroupId group_id) {
+  base_logic::RLockGd lock(data_->lock_);
+
+  StockGroup* g = GetGroup(group_id);
+  if (NULL == g) {
+    LOG_ERROR2("user:%s get stock position error: group_id:%d not exist",
+               data_->name_.data(), group_id);
+    return GroupStockPositionList();
+  }
+
+  GroupStockPositionList l;
+  for (size_t i = 0; i < data_->stock_position_list_.size(); ++i) {
+    if (data_->stock_position_list_[i].group_id() == group_id) {
+      l.push_back(data_->stock_position_list_[i]);
+    }
+  }
+  return l;
+}
+
 Status::State UserInfo::OnBuyOrder(SubmitOrderReq& req, double* frozen) {
   // check available capital
   double need = 0.0;
@@ -356,9 +384,9 @@ Status::State UserInfo::OnSellOrder(SubmitOrderReq& req) {
 Status::State UserInfo::SubmitOrder(SubmitOrderReq& req) {
   WlockThreadrw (data_->lock_);
 
-  if (0 == req.group_id) {
-    req.group_id = data_->default_gid_;
-  }
+//  if (0 == req.group_id) {
+//    req.group_id = data_->default_gid_;
+//  }
 
   StockGroup* g = GetGroup(req.group_id);
   if (NULL == g) {
