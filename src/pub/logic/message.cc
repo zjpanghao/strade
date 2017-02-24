@@ -7,6 +7,7 @@
 
 #include "logic/base_values.h"
 #include "logic/logic_comm.h"
+#include "basic/basic_util.h"
 
 #define OSS_WRITE(x)        \
   oss << "\t\t" << #x << " = " << x << std::endl
@@ -66,12 +67,17 @@ bool ResHead::Serialize(DictionaryValue& dict) {
 }
 ///////////////////////////////////////////////////////////////////////////////
 bool CreateGroupReq::Deserialize(DictionaryValue& dict) {
-  if (!dict.GetString(L"group_name", &group_name)) {
+  std::string str;
+  if (!dict.GetString(L"group_name", &str)) {
     LOG_ERROR("NOT FIND group_name");
     return false;
   }
 
-  std::string str;
+  if (!base::BasicUtil::UrlDecode(str, group_name)) {
+    LOG_ERROR("group_name Decode error");
+    return false;
+  }
+
   if (!dict.GetString(L"code_list", &str)) {
     LOG_ERROR("NOT FIND code_list");
     return false;
