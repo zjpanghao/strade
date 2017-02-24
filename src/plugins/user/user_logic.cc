@@ -54,7 +54,9 @@ UserLogic::UserLogic() {
   if (engine == NULL)
     assert(0);
   engine->Init();
-  LOG_DEBUG2("engine: %p", engine);
+
+  StockGroup::engine_ = engine;
+  LOG_DEBUG2("user logic engine: %p", engine);
 }
 
 UserLogic::~UserLogic() {
@@ -238,7 +240,10 @@ bool UserLogic::OnTimeout(struct server *srv, char *id, int opcode, int time) {
 
 void UserLogic::OnCreateGroup(int socket, DictionaryValue& dict) {
   CreateGroupReq msg;
+  CreateGroupRes res;
   if (!msg.StartDeserialize(dict)) {
+    res.status.state = Status::ERROR_MSG;
+    SendResponse(socket, res);
     return ;
   }
 
@@ -246,7 +251,6 @@ void UserLogic::OnCreateGroup(int socket, DictionaryValue& dict) {
   msg.StartDump(oss);
   LOG_DEBUG2("%s", oss.str().data());
 
-  CreateGroupRes res;
   UserInfo* user = engine->GetUser(msg.user_id);
   GroupId gid = 0;
   res.status.state =
@@ -258,6 +262,8 @@ void UserLogic::OnCreateGroup(int socket, DictionaryValue& dict) {
 void UserLogic::OnAddStock(int socket, DictionaryValue& dict) {
   AddStockReq msg;
   if (!msg.StartDeserialize(dict)) {
+    Status s = Status::ERROR_MSG;
+    SendResponse(socket, s);
     return ;
   }
 
@@ -274,6 +280,8 @@ void UserLogic::OnAddStock(int socket, DictionaryValue& dict) {
 void UserLogic::OnDelStock(int socket, DictionaryValue& dict) {
   DelStockReq msg;
   if (!msg.StartDeserialize(dict)) {
+    Status s = Status::ERROR_MSG;
+    SendResponse(socket, s);
     return ;
   }
 
@@ -288,7 +296,10 @@ void UserLogic::OnDelStock(int socket, DictionaryValue& dict) {
 
 void UserLogic::OnQueryGroup(int socket, DictionaryValue& dict) {
   QueryGroupReq msg;
+  QueryGroupsRes res;
   if (!msg.StartDeserialize(dict)) {
+    res.status.state = Status::ERROR_MSG;
+    SendResponse(socket, res);
     return ;
   }
 
@@ -296,7 +307,6 @@ void UserLogic::OnQueryGroup(int socket, DictionaryValue& dict) {
   msg.StartDump(oss);
   LOG_DEBUG2("%s", oss.str().data());
 
-  QueryGroupsRes res;
   UserInfo* user = engine->GetUser(msg.user_id);
   StockGroupList gs = user->GetAllGroups();
   for (size_t i = 0; i < gs.size(); ++i) {
@@ -310,7 +320,10 @@ void UserLogic::OnQueryGroup(int socket, DictionaryValue& dict) {
 
 void UserLogic::OnQueryStock(int socket, DictionaryValue& dict) {
   QueryStocksReq msg;
+  QueryStocksRes res;
   if (!msg.StartDeserialize(dict)) {
+    res.status.state = Status::ERROR_MSG;
+    SendResponse(socket, res);
     return ;
   }
 
@@ -318,7 +331,6 @@ void UserLogic::OnQueryStock(int socket, DictionaryValue& dict) {
   msg.StartDump(oss);
   LOG_DEBUG2("%s", oss.str().data());
 
-  QueryStocksRes res;
   StockTotalInfo info;
   StockCodeList stocks;
   UserInfo* user = engine->GetUser(msg.user_id);
@@ -336,7 +348,10 @@ void UserLogic::OnQueryStock(int socket, DictionaryValue& dict) {
     s.name = info.get_stock_name();
     s.visit_heat = info.get_visit_num();
     s.price = ri.price;
-    s.change = (ri.price-ri.open)/ri.open*100;
+    s.change = 0.0;
+    if (ri.open != 0.0) {
+      s.change = (ri.price-ri.open)/ri.open*100;
+    }
     s.volume = ri.vol;
     s.industry = info.get_industry();
     res.stock_list.push_back(s);
@@ -346,7 +361,10 @@ void UserLogic::OnQueryStock(int socket, DictionaryValue& dict) {
 
 void UserLogic::OnQueryGroupHoldingStock(int socket, DictionaryValue& dict) {
   GroupStockHoldingReq msg;
+  GroupStockHoldingRes res;
   if (!msg.StartDeserialize(dict)) {
+    res.status.state = Status::ERROR_MSG;
+    SendResponse(socket, res);
     return ;
   }
 
@@ -355,7 +373,6 @@ void UserLogic::OnQueryGroupHoldingStock(int socket, DictionaryValue& dict) {
   LOG_DEBUG2("%s", oss.str().data());
 
   StockTotalInfo info;
-  GroupStockHoldingRes res;
   UserInfo* user = engine->GetUser(msg.user_id);
   GroupStockPositionList l = user->GetAllGroupStockPosition();
   for (size_t i = 0; i < l.size(); ++i) {
@@ -374,7 +391,10 @@ void UserLogic::OnQueryGroupHoldingStock(int socket, DictionaryValue& dict) {
 
 void UserLogic::OnQueryHoldingStock(int socket, DictionaryValue& dict) {
   QueryHoldingStocksReq msg;
+  QueryHoldingStocksRes res;
   if (!msg.StartDeserialize(dict)) {
+    res.status.state = Status::ERROR_MSG;
+    SendResponse(socket, res);
     return ;
   }
 
@@ -383,7 +403,6 @@ void UserLogic::OnQueryHoldingStock(int socket, DictionaryValue& dict) {
   LOG_DEBUG2("%s", oss.str().data());
 
   StockTotalInfo info;
-  QueryHoldingStocksRes res;
   UserInfo* user = engine->GetUser(msg.user_id);
   StockGroup* g = user->GetGroup(msg.group_id);
   GroupStockPositionList l = user->GetAllGroupStockPosition();
@@ -416,7 +435,10 @@ void UserLogic::OnQueryHoldingStock(int socket, DictionaryValue& dict) {
 
 void UserLogic::OnQueryTodayOrder(int socket, DictionaryValue& dict) {
   QueryTodayOrdersReq msg;
+  QueryTodayOrdersRes res;
   if (!msg.StartDeserialize(dict)) {
+    res.status.state = Status::ERROR_MSG;
+    SendResponse(socket, res);
     return ;
   }
 
@@ -425,7 +447,6 @@ void UserLogic::OnQueryTodayOrder(int socket, DictionaryValue& dict) {
   LOG_DEBUG2("%s", oss.str().data());
 
   StockTotalInfo info;
-  QueryTodayOrdersRes res;
   StockUtil *util = StockUtil::Instance();
   UserInfo* user = engine->GetUser(msg.user_id);
   OrderFilterList filters;
@@ -454,7 +475,10 @@ void UserLogic::OnQueryTodayOrder(int socket, DictionaryValue& dict) {
 }
 void UserLogic::OnQueryTodayFinishedOrder(int socket, DictionaryValue& dict) {
   QueryTodayFinishedOrdersReq msg;
+  QueryTodayFinishedOrdersRes res;
   if (!msg.StartDeserialize(dict)) {
+    res.status.state = Status::ERROR_MSG;
+    SendResponse(socket, res);
     return ;
   }
 
@@ -462,7 +486,6 @@ void UserLogic::OnQueryTodayFinishedOrder(int socket, DictionaryValue& dict) {
   msg.StartDump(oss);
   LOG_DEBUG2("%s", oss.str().data());
 
-  QueryTodayFinishedOrdersRes res;
   StockUtil *util = StockUtil::Instance();
   UserInfo* user = engine->GetUser(msg.user_id);
   OrderFilterList filters;
@@ -487,7 +510,10 @@ void UserLogic::OnQueryTodayFinishedOrder(int socket, DictionaryValue& dict) {
 
 void UserLogic::OnQueryHistoryFinishedOrder(int socket, DictionaryValue& dict) {
   QueryHistoryFinishedOrdersReq msg;
+  QueryHistoryFinishedOrdersRes res;
   if (!msg.StartDeserialize(dict)) {
+    res.status.state = Status::ERROR_MSG;
+    SendResponse(socket, res);
     return ;
   }
 
@@ -495,7 +521,6 @@ void UserLogic::OnQueryHistoryFinishedOrder(int socket, DictionaryValue& dict) {
   msg.StartDump(oss);
   LOG_DEBUG2("%s", oss.str().data());
 
-  QueryHistoryFinishedOrdersRes res;
   StockUtil *util = StockUtil::Instance();
   UserInfo* user = engine->GetUser(msg.user_id);
   OrderFilterList filters;
@@ -520,7 +545,10 @@ void UserLogic::OnQueryHistoryFinishedOrder(int socket, DictionaryValue& dict) {
 }
 void UserLogic::OnQueryStatement(int socket, DictionaryValue& dict) {
   QueryStatementReq msg;
+  QueryStatementRes res;
   if (!msg.StartDeserialize(dict)) {
+    res.status.state = Status::ERROR_MSG;
+    SendResponse(socket, res);
     return ;
   }
 
@@ -528,7 +556,6 @@ void UserLogic::OnQueryStatement(int socket, DictionaryValue& dict) {
   msg.StartDump(oss);
   LOG_DEBUG2("%s", oss.str().data());
 
-  QueryStatementRes res;
   StockUtil *util = StockUtil::Instance();
   UserInfo* user = engine->GetUser(msg.user_id);
   OrderFilterList filters;
@@ -557,7 +584,10 @@ void UserLogic::OnQueryStatement(int socket, DictionaryValue& dict) {
 
 void UserLogic::OnSubmitOrder(int socket, DictionaryValue& dict) {
   SubmitOrderReq msg;
+  SubmitOrderRes res;
   if (!msg.StartDeserialize(dict)) {
+    res.status.state = Status::ERROR_MSG;
+    SendResponse(socket, res);
     return ;
   }
 
@@ -565,7 +595,6 @@ void UserLogic::OnSubmitOrder(int socket, DictionaryValue& dict) {
   msg.StartDump(oss);
   LOG_DEBUG2("%s", oss.str().data());
 
-  SubmitOrderRes res;
   UserInfo* user = engine->GetUser(msg.user_id);
   res.status.state = user->SubmitOrder(msg);
 
@@ -574,7 +603,10 @@ void UserLogic::OnSubmitOrder(int socket, DictionaryValue& dict) {
 
 void UserLogic::OnAvailableStockCount(int socket, DictionaryValue& dict) {
   AvailableStockCountReq msg;
+  AvailableStockCountRes res;
   if (!msg.StartDeserialize(dict)) {
+    res.status.state = Status::ERROR_MSG;
+    SendResponse(socket, res);
     return ;
   }
 
@@ -583,7 +615,6 @@ void UserLogic::OnAvailableStockCount(int socket, DictionaryValue& dict) {
   LOG_DEBUG2("%s", oss.str().data());
 
   StockTotalInfo info;
-  AvailableStockCountRes res;
   if (!engine->GetStockTotalInfoByCode(msg.code, info)) {
     LOG_ERROR2("NOT FIND stock:%s in share", msg.code.data());
     res.status.state = Status::STOCK_NOT_EXIST;
@@ -613,6 +644,8 @@ void UserLogic::OnAvailableStockCount(int socket, DictionaryValue& dict) {
 void UserLogic::OnCancelOrder(int socket, DictionaryValue& dict) {
   CancelOrderReq msg;
   if (!msg.StartDeserialize(dict)) {
+    Status s = Status::ERROR_MSG;
+    SendResponse(socket, s);
     return ;
   }
 
@@ -627,7 +660,10 @@ void UserLogic::OnCancelOrder(int socket, DictionaryValue& dict) {
 
 void UserLogic::OnProfitAndLossOrderNum(int socket, DictionaryValue& dict) {
   ProfitAndLossOrderNumReq msg;
+  ProfitAndLossOrderNumRes res;
   if (!msg.StartDeserialize(dict)) {
+    res.status.state = Status::ERROR_MSG;
+    SendResponse(socket, res);
     return ;
   }
 
@@ -635,7 +671,6 @@ void UserLogic::OnProfitAndLossOrderNum(int socket, DictionaryValue& dict) {
   msg.StartDump(oss);
   LOG_DEBUG2("%s", oss.str().data());
 
-  ProfitAndLossOrderNumRes res;
   UserInfo* user = engine->GetUser(msg.user_id);
   OrderFilterList filters;
 
@@ -658,7 +693,10 @@ void UserLogic::OnProfitAndLossOrderNum(int socket, DictionaryValue& dict) {
 
 void UserLogic::OnModifyInitCapital(int socket, DictionaryValue& dict) {
   ModifyInitCapitalReq msg;
+  ModifyInitCapitalRes res;
   if (!msg.StartDeserialize(dict)) {
+    res.status.state = Status::ERROR_MSG;
+    SendResponse(socket, res);
     return ;
   }
 
@@ -666,7 +704,6 @@ void UserLogic::OnModifyInitCapital(int socket, DictionaryValue& dict) {
   msg.StartDump(oss);
   LOG_DEBUG2("%s", oss.str().data());
 
-  ModifyInitCapitalRes res;
   UserInfo* user = engine->GetUser(msg.user_id);
   StockGroup* g = user->GetGroup(msg.group_id);
   if (NULL == g) {

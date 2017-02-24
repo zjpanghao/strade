@@ -113,9 +113,16 @@ stock_util.o : ./$(PUB_DIR)/logic/stock_util.cc ./$(PUB_DIR)/logic/stock_util.h
 
 user_info.o : ./$(PUB_DIR)/logic/user_info.cc ./$(PUB_DIR)/logic/user_info.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./$(PUB_DIR)/logic/user_info.cc $(INCLUDE_PATHS)
-		
+
+abstract_dao.o : ./$(PUB_DIR)/dao/abstract_dao.cc ./$(PUB_DIR)/dao/abstract_dao.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./$(PUB_DIR)/dao/abstract_dao.cc $(INCLUDE_PATHS)
+
+strade_basic_info.o : ./$(PUB_DIR)/logic/strade_basic_info.cc ./$(PUB_DIR)/logic/strade_basic_info.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./$(PUB_DIR)/logic/strade_basic_info.cc $(INCLUDE_PATHS)
+	
 $(PLUGIN) : user_init.o user_logic.o message.o	logic_unit.o stock_group.o\
-			user_engine.o stock_util.o order_filter.o user_info.o\
+			user_engine.o stock_util.o order_filter.o user_info.o abstract_dao.o\
+			strade_basic_info.o\
 			$(LIB_DIR)/base/lib/mybase.a 
 			$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LINK_PATHS) -lexpat -lrt -lpthread -liconv -ldl -lcurl -lsasl2 -lmysqlclient -lmemcached -lmemcachedutil  \
 	$^ -o $@
