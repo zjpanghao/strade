@@ -120,6 +120,8 @@ class SSEngine {
                                 base_logic::MYSQL_JOB_TYPE type,
                                 void* param = NULL) = 0;
 
+  // 盘后清算
+  virtual bool OnCloseMarket() = 0;
  protected:
   StradeShareDB* strade_share_db_;
 };
@@ -205,6 +207,9 @@ class SSEngineImpl : public SSEngine, public strade_logic::Subject {
                                 MysqlCallback callback,
                                 base_logic::MYSQL_JOB_TYPE type,
                                 void* param = NULL);
+
+  // 盘后清算
+  virtual bool OnCloseMarket();
 
  private:
   bool GetStockTotalNonBlock(const std::string& stock_code,
