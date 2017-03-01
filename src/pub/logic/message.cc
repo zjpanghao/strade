@@ -3,6 +3,7 @@
 
 #include "message.h"
 
+#include <stdlib.h>
 #include <sstream>
 
 #include "logic/base_values.h"
@@ -451,6 +452,7 @@ bool QueryStatementRes::Serialize(DictionaryValue& dict) {
 ///////////////////////////////////////////////////////////////////////////////
 bool SubmitOrderReq::Deserialize(DictionaryValue& dict) {
   int64 t;
+  std::string str;
   if (!dict.GetBigInteger(L"group_id", &t)) {
     LOG_ERROR("NOT FIND group_id");
     return false;
@@ -461,6 +463,7 @@ bool SubmitOrderReq::Deserialize(DictionaryValue& dict) {
     LOG_ERROR("NOT FIND code");
     return false;
   }
+  code.erase(code.size()-1);
 
   if (!dict.GetReal(L"order_price", &order_price)) {
     LOG_ERROR("NOT FIND order_price");
@@ -491,6 +494,7 @@ void SubmitOrderReq::Dump(std::ostringstream& oss) {
   OSS_WRITE(group_id);
   OSS_WRITE(code);
   OSS_WRITE(order_price);
+  OSS_WRITE(expected_price);
   OSS_WRITE(order_nums);
   OSS_WRITE((int)op);
 }
@@ -547,6 +551,9 @@ bool AvailableStockCountReq::Deserialize(DictionaryValue& dict) {
     LOG_ERROR("NOT FIND code");
     return false;
   }
+
+  // erase last ','
+  code.erase(code.size()-1);
   return true;
 }
 
@@ -603,6 +610,7 @@ bool ProfitAndLossOrderNumRes::Serialize(DictionaryValue& dict) {
 
 bool ModifyInitCapitalReq::Deserialize(DictionaryValue& dict) {
   int64 t;
+  std::string str;
   if (!dict.GetBigInteger(L"group_id", &t)) {
     LOG_ERROR("NOT FIND group_id");
     return false;
@@ -613,7 +621,6 @@ bool ModifyInitCapitalReq::Deserialize(DictionaryValue& dict) {
     LOG_ERROR("NOT FIND capital");
     return false;
   }
-
   return true;
 }
 

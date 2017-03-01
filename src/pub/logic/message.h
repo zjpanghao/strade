@@ -58,7 +58,8 @@ struct Status {
     STOCK_NOT_EXIST,
     CAPITAL_NOT_ENOUGH,
     NO_HOLDING_STOCK,
-    ORDER_NOT_EXIST
+    ORDER_NOT_EXIST,
+    NOT_IN_ORDER_TIME
   };
 
   Status() : state(SUCCESS) { }
