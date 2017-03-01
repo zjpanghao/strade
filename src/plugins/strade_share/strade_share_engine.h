@@ -123,6 +123,9 @@ class SSEngine {
                                 base_logic::MYSQL_JOB_TYPE type,
                                 void* param = NULL) = 0;
 
+  // 盘后清算
+  virtual bool OnCloseMarket() = 0;
+
   // 获取当前的市场时间
   virtual time_t market_time() const = 0;
 
@@ -215,6 +218,9 @@ class SSEngineImpl : public SSEngine, public strade_logic::Subject {
                                 MysqlCallback callback,
                                 base_logic::MYSQL_JOB_TYPE type,
                                 void* param = NULL);
+
+  // 盘后清算
+  virtual bool OnCloseMarket();
 
   virtual time_t market_time() const {
     return market_time_;

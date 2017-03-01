@@ -113,6 +113,14 @@ double GroupStockPosition::cost() const {
   return sum / count;
 }
 
+double GroupStockPosition::total_cost() const {
+  double sum = 0.0;
+  for (size_t i = 0; i < data_->fake_stock_position_list_.size(); ++i) {
+    sum += data_->fake_stock_position_list_[i].order()->amount();
+  }
+  return sum;
+}
+
 bool GroupStockPosition::AddFakeStockPosition(const FakeStockPosition& p) {
   for (size_t i = 0; i < data_->fake_stock_position_list_.size(); ++i) {
     if (p.id() == data_->fake_stock_position_list_[i].id()) {

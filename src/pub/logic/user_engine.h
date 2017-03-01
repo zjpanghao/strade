@@ -18,6 +18,7 @@ class UserEngine {
   }
  public:
   bool Init();
+  void OnCloseMarket();
   bool exist(UserId id) const { return user_id_map_.count(id); }
   UserInfo* GetUser(UserId id);
  private:

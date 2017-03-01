@@ -186,7 +186,7 @@ class OrderInfo : public strade_logic::Observer,
   Data* data_;
 };
 
-typedef std::vector<OrderInfo> OrderList;
+typedef std::vector<OrderInfo*> OrderList;
 } /* namespace strade_user */
 
 #endif /* SRC_PUB_LOGIC_ORDER_INFO_H_ */

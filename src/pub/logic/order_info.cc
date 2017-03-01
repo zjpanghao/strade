@@ -14,6 +14,7 @@
 #include "strade_share/strade_share_engine.h"
 #include "logic/strade_basic_info.h"
 #include "logic/user_engine.h"
+#include "logic/stock_util.h"
 
 namespace strade_user {
 
@@ -21,6 +22,7 @@ using strade_share::SSEngine;
 using strade_share::STOCKS_MAP;
 using strade_share::STOCK_REAL_MAP;
 using strade_logic::StockTotalInfo;
+using stock_logic::StockUtil;
 
 OrderInfo::OrderInfo() {
   data_ = new Data();
@@ -135,6 +137,12 @@ void OrderInfo::Update(int opcode) {
 }
 
 bool OrderInfo::MakeADeal(double price) {
+  // check trading time
+  StockUtil* util = StockUtil::Instance();
+  if (!util->is_trading_time()) {
+    return false;
+  }
+
   if (!can_deal(price)) {
     return false;
   }
@@ -172,6 +180,12 @@ bool OrderInfo::MakeADeal(double price) {
 }
 
 void OrderInfo::OnStockUpdate() {
+  // check trading time
+  StockUtil* util = StockUtil::Instance();
+  if (!util->is_trading_time()) {
+    return ;
+  }
+
   if (FINISHED == data_->op_) {
     LOG_ERROR2("fatal error: finished order, user_id:%d, group_id:%d, "
         "order_id:%d, code:%s, num:%d, create_time:%d, deal_time:%d",

@@ -20,6 +20,8 @@
 #define SHARE_LIB_PATH          "./strade_share/strade_share.so"
 #define SHARE_LIB_HANDLER       "GetStradeShareEngine"
 
+#define TIMER_CHECK_CLOSE       0
+
 using base_logic::ValueSerializer;
 
 
@@ -28,6 +30,7 @@ namespace strade_user {
 using stock_logic::StockUtil;
 using strade_share::SSEngine;
 using strade_logic::StockTotalInfo;
+using stock_logic::StockRealInfo;
 
 SSEngine* engine = NULL;
 
@@ -52,8 +55,12 @@ UserLogic::UserLogic() {
   engine = (*handler)();
   if (engine == NULL)
     assert(0);
+
+  StockGroup::engine_ = engine;
+  UserInfo::engine_ = engine;
+
   engine->Init();
-  LOG_DEBUG2("engine: %p", engine);
+  LOG_DEBUG2("user logic engine: %p", engine);
 }
 
 UserLogic::~UserLogic() {
@@ -198,6 +205,9 @@ bool UserLogic::OnUserMessage(struct server *srv, const int socket,
     case ProfitAndLossOrderNumReq::ID:
       OnProfitAndLossOrderNum(socket, *dict);
       break;
+    case ModifyInitCapitalReq::ID:
+      OnModifyInitCapital(socket, *dict);
+      break;
     default:
       Status status = Status::UNKNOWN_OPCODE;
       SendResponse(socket, status);
@@ -225,16 +235,27 @@ bool UserLogic::OnBroadcastClose(struct server *srv, const int socket) {
 }
 
 bool UserLogic::OnIniTimer(struct server *srv) {
+  srv->add_time_task(srv, "user", 1, 5, -1);
   return true;
 }
 
 bool UserLogic::OnTimeout(struct server *srv, char *id, int opcode, int time) {
+  switch (opcode) {
+    case TIMER_CHECK_CLOSE:
+      ProcessClose();
+      break;
+    default:
+      break;
+  }
   return true;
 }
 
 void UserLogic::OnCreateGroup(int socket, DictionaryValue& dict) {
   CreateGroupReq msg;
+  CreateGroupRes res;
   if (!msg.StartDeserialize(dict)) {
+    res.status.state = Status::ERROR_MSG;
+    SendResponse(socket, res);
     return ;
   }
 
@@ -242,7 +263,6 @@ void UserLogic::OnCreateGroup(int socket, DictionaryValue& dict) {
   msg.StartDump(oss);
   LOG_DEBUG2("%s", oss.str().data());
 
-  CreateGroupRes res;
   UserInfo* user = engine->GetUser(msg.user_id);
   GroupId gid = 0;
   res.status.state =
@@ -254,6 +274,8 @@ void UserLogic::OnCreateGroup(int socket, DictionaryValue& dict) {
 void UserLogic::OnAddStock(int socket, DictionaryValue& dict) {
   AddStockReq msg;
   if (!msg.StartDeserialize(dict)) {
+    Status s = Status::ERROR_MSG;
+    SendResponse(socket, s);
     return ;
   }
 
@@ -270,6 +292,8 @@ void UserLogic::OnAddStock(int socket, DictionaryValue& dict) {
 void UserLogic::OnDelStock(int socket, DictionaryValue& dict) {
   DelStockReq msg;
   if (!msg.StartDeserialize(dict)) {
+    Status s = Status::ERROR_MSG;
+    SendResponse(socket, s);
     return ;
   }
 
@@ -284,7 +308,10 @@ void UserLogic::OnDelStock(int socket, DictionaryValue& dict) {
 
 void UserLogic::OnQueryGroup(int socket, DictionaryValue& dict) {
   QueryGroupReq msg;
+  QueryGroupsRes res;
   if (!msg.StartDeserialize(dict)) {
+    res.status.state = Status::ERROR_MSG;
+    SendResponse(socket, res);
     return ;
   }
 
@@ -292,7 +319,6 @@ void UserLogic::OnQueryGroup(int socket, DictionaryValue& dict) {
   msg.StartDump(oss);
   LOG_DEBUG2("%s", oss.str().data());
 
-  QueryGroupsRes res;
   UserInfo* user = engine->GetUser(msg.user_id);
   StockGroupList gs = user->GetAllGroups();
   for (size_t i = 0; i < gs.size(); ++i) {
@@ -306,7 +332,10 @@ void UserLogic::OnQueryGroup(int socket, DictionaryValue& dict) {
 
 void UserLogic::OnQueryStock(int socket, DictionaryValue& dict) {
   QueryStocksReq msg;
+  QueryStocksRes res;
   if (!msg.StartDeserialize(dict)) {
+    res.status.state = Status::ERROR_MSG;
+    SendResponse(socket, res);
     return ;
   }
 
@@ -314,7 +343,6 @@ void UserLogic::OnQueryStock(int socket, DictionaryValue& dict) {
   msg.StartDump(oss);
   LOG_DEBUG2("%s", oss.str().data());
 
-  QueryStocksRes res;
   StockTotalInfo info;
   StockCodeList stocks;
   UserInfo* user = engine->GetUser(msg.user_id);
@@ -327,12 +355,17 @@ void UserLogic::OnQueryStock(int socket, DictionaryValue& dict) {
       LOG_ERROR2("NOT FIND stock:%s in share", s.code.data());
       continue;
     }
-    // TODO:
-//    s.visit_heat =;
-//    s.price = 11.53;
-//    s.change = ;
-//    s.volume = 6868;
-//    s.industry = "房地产开发";
+    StockRealInfo ri;
+    info.GetCurrRealMarketInfo(ri);
+    s.name = info.get_stock_name();
+    s.visit_heat = info.get_visit_num();
+    s.price = ri.price;
+    s.change = 0.0;
+    if (ri.open != 0.0) {
+      s.change = (ri.price-ri.open)/ri.open*100;
+    }
+    s.volume = ri.vol;
+    s.industry = info.get_industry();
     res.stock_list.push_back(s);
   }
   SendResponse(socket, res);
@@ -340,7 +373,10 @@ void UserLogic::OnQueryStock(int socket, DictionaryValue& dict) {
 
 void UserLogic::OnQueryGroupHoldingStock(int socket, DictionaryValue& dict) {
   GroupStockHoldingReq msg;
+  GroupStockHoldingRes res;
   if (!msg.StartDeserialize(dict)) {
+    res.status.state = Status::ERROR_MSG;
+    SendResponse(socket, res);
     return ;
   }
 
@@ -349,7 +385,6 @@ void UserLogic::OnQueryGroupHoldingStock(int socket, DictionaryValue& dict) {
   LOG_DEBUG2("%s", oss.str().data());
 
   StockTotalInfo info;
-  GroupStockHoldingRes res;
   UserInfo* user = engine->GetUser(msg.user_id);
   GroupStockPositionList l = user->GetAllGroupStockPosition();
   for (size_t i = 0; i < l.size(); ++i) {
@@ -359,8 +394,7 @@ void UserLogic::OnQueryGroupHoldingStock(int socket, DictionaryValue& dict) {
       LOG_ERROR2("NOT FIND stock:%s in share", s.code.data());
       continue;
     }
-    // TODO:
-//    s.name =
+    s.name = info.get_stock_name();
     s.holding = l[i].count();
     res.stock_list.push_back(s);
   }
@@ -369,7 +403,10 @@ void UserLogic::OnQueryGroupHoldingStock(int socket, DictionaryValue& dict) {
 
 void UserLogic::OnQueryHoldingStock(int socket, DictionaryValue& dict) {
   QueryHoldingStocksReq msg;
+  QueryHoldingStocksRes res;
   if (!msg.StartDeserialize(dict)) {
+    res.status.state = Status::ERROR_MSG;
+    SendResponse(socket, res);
     return ;
   }
 
@@ -378,21 +415,31 @@ void UserLogic::OnQueryHoldingStock(int socket, DictionaryValue& dict) {
   LOG_DEBUG2("%s", oss.str().data());
 
   StockTotalInfo info;
-  QueryHoldingStocksRes res;
   UserInfo* user = engine->GetUser(msg.user_id);
+  StockGroup* g = user->GetGroup(msg.group_id);
   GroupStockPositionList l = user->GetAllGroupStockPosition();
   for (size_t i = 0; i < l.size(); ++i) {
+    if (0 != l[i].group_id() && l[i].group_id() != msg.group_id)
+      continue;
     QueryHoldingStocksRes::StockInfo s;
     s.code = l[i].code();
     s.holding = l[i].count();
     s.available = l[i].available();
     s.cost = l[i].cost();
-    // TODO
-//    s.price = 11.53;
-//    s.market_value = 7678.98;
-    s.profit = -82.68;
-    s.profit_ratio = -2.68;
-    s.position = 6.8;
+
+    if (!engine->GetStockTotalInfoByCode(s.code, info)) {
+      LOG_ERROR2("NOT FIND stock:%s in share", s.code.data());
+      continue;
+    }
+    StockRealInfo ri;
+    info.GetCurrRealMarketInfo(ri);
+    s.price = ri.price;
+    s.market_value = ri.price * s.holding;
+    s.profit = (ri.price-s.cost) * s.holding;
+
+    double total_cost = l[i].total_cost();
+    s.profit_ratio = (s.market_value-total_cost)/total_cost*100;
+    s.position = total_cost / g->init_capital();
     res.stock_list.push_back(s);
   }
   SendResponse(socket, res);
@@ -400,7 +447,10 @@ void UserLogic::OnQueryHoldingStock(int socket, DictionaryValue& dict) {
 
 void UserLogic::OnQueryTodayOrder(int socket, DictionaryValue& dict) {
   QueryTodayOrdersReq msg;
+  QueryTodayOrdersRes res;
   if (!msg.StartDeserialize(dict)) {
+    res.status.state = Status::ERROR_MSG;
+    SendResponse(socket, res);
     return ;
   }
 
@@ -409,36 +459,38 @@ void UserLogic::OnQueryTodayOrder(int socket, DictionaryValue& dict) {
   LOG_DEBUG2("%s", oss.str().data());
 
   StockTotalInfo info;
-  QueryTodayOrdersRes res;
   StockUtil *util = StockUtil::Instance();
   UserInfo* user = engine->GetUser(msg.user_id);
   OrderFilterList filters;
   time_t begin_time = util->to_timestamp(0);
   time_t end_time = util->to_timestamp(235959);
+  filters.push_back(new OrderFilter(msg.group_id));
   filters.push_back(new OrderCreateTimeFilter(begin_time, end_time));
   OrderList orders = user->FindOrders(filters);
   for (size_t i = 0; i < orders.size(); ++i) {
     QueryTodayOrdersRes::OrderInfo o;
-    o.id = orders[i].id();
-    o.code = orders[i].code();
+    o.id = orders[i]->id();
+    o.code = orders[i]->code();
     if (!engine->GetStockTotalInfoByCode(o.code, info)) {
       LOG_ERROR2("NOT FIND stock:%s in share", o.code.data());
       continue;
     }
-    // TODO:
-//    o.name =
-    o.op = orders[i].operation();
-    o.order_price = orders[i].order_price();
-    o.order_nums = orders[i].order_num();
-    o.order_time = orders[i].craete_time();
-    o.status = orders[i].status();
+    o.name = info.get_stock_name();
+    o.op = orders[i]->operation();
+    o.order_price = orders[i]->order_price();
+    o.order_nums = orders[i]->order_num();
+    o.order_time = orders[i]->craete_time();
+    o.status = orders[i]->status();
     res.order_list.push_back(o);
   }
   SendResponse(socket, res);
 }
 void UserLogic::OnQueryTodayFinishedOrder(int socket, DictionaryValue& dict) {
   QueryTodayFinishedOrdersReq msg;
+  QueryTodayFinishedOrdersRes res;
   if (!msg.StartDeserialize(dict)) {
+    res.status.state = Status::ERROR_MSG;
+    SendResponse(socket, res);
     return ;
   }
 
@@ -446,23 +498,23 @@ void UserLogic::OnQueryTodayFinishedOrder(int socket, DictionaryValue& dict) {
   msg.StartDump(oss);
   LOG_DEBUG2("%s", oss.str().data());
 
-  QueryTodayFinishedOrdersRes res;
   StockUtil *util = StockUtil::Instance();
   UserInfo* user = engine->GetUser(msg.user_id);
   OrderFilterList filters;
   time_t begin_time = util->to_timestamp(0);
   time_t end_time = util->to_timestamp(235959);
+  filters.push_back(new OrderFilter(msg.group_id));
   filters.push_back(new OrderCreateTimeFilter(begin_time, end_time));
   filters.push_back(new OrderStatusFilter(FINISHED));
   OrderList orders = user->FindOrders(filters);
   for (size_t i = 0; i < orders.size(); ++i) {
     QueryTodayFinishedOrdersRes::OrderInfo o;
-    o.code = orders[i].code();
-    o.op = orders[i].operation();
-    o.order_price = orders[i].deal_price();
-    o.order_nums = orders[i].deal_num();
-    o.order_time = orders[i].deal_time();
-    o.amount = orders[i].amount();
+    o.code = orders[i]->code();
+    o.op = orders[i]->operation();
+    o.order_price = orders[i]->deal_price();
+    o.order_nums = orders[i]->deal_num();
+    o.order_time = orders[i]->deal_time();
+    o.amount = orders[i]->amount();
     res.order_list.push_back(o);
   }
   SendResponse(socket, res);
@@ -470,7 +522,10 @@ void UserLogic::OnQueryTodayFinishedOrder(int socket, DictionaryValue& dict) {
 
 void UserLogic::OnQueryHistoryFinishedOrder(int socket, DictionaryValue& dict) {
   QueryHistoryFinishedOrdersReq msg;
+  QueryHistoryFinishedOrdersRes res;
   if (!msg.StartDeserialize(dict)) {
+    res.status.state = Status::ERROR_MSG;
+    SendResponse(socket, res);
     return ;
   }
 
@@ -478,34 +533,34 @@ void UserLogic::OnQueryHistoryFinishedOrder(int socket, DictionaryValue& dict) {
   msg.StartDump(oss);
   LOG_DEBUG2("%s", oss.str().data());
 
-  QueryHistoryFinishedOrdersRes res;
   StockUtil *util = StockUtil::Instance();
   UserInfo* user = engine->GetUser(msg.user_id);
   OrderFilterList filters;
   time_t b = util->to_timestamp(msg.begin_time);
   time_t e = util->to_timestamp(msg.end_time);
+  filters.push_back(new OrderFilter(msg.group_id));
   filters.push_back(new OrderDealTimeFilter(b, e));
   filters.push_back(new OrderStatusFilter(FINISHED));
   OrderList orders = user->FindOrders(filters);
-  for (size_t i = 0; i < filters.size(); ++i) {
-    delete filters[i];
-  }
 
   for (size_t i = 0; i < orders.size(); ++i) {
     QueryHistoryFinishedOrdersRes::OrderInfo o;
-    o.code = orders[i].code();
-    o.op = orders[i].operation();
-    o.order_price = orders[i].deal_price();
-    o.order_nums = orders[i].deal_num();
-    o.order_time = orders[i].deal_time();
-    o.amount = orders[i].amount();
+    o.code = orders[i]->code();
+    o.op = orders[i]->operation();
+    o.order_price = orders[i]->deal_price();
+    o.order_nums = orders[i]->deal_num();
+    o.order_time = orders[i]->deal_time();
+    o.amount = orders[i]->amount();
     res.order_list.push_back(o);
   }
   SendResponse(socket, res);
 }
 void UserLogic::OnQueryStatement(int socket, DictionaryValue& dict) {
   QueryStatementReq msg;
+  QueryStatementRes res;
   if (!msg.StartDeserialize(dict)) {
+    res.status.state = Status::ERROR_MSG;
+    SendResponse(socket, res);
     return ;
   }
 
@@ -513,30 +568,27 @@ void UserLogic::OnQueryStatement(int socket, DictionaryValue& dict) {
   msg.StartDump(oss);
   LOG_DEBUG2("%s", oss.str().data());
 
-  QueryStatementRes res;
   StockUtil *util = StockUtil::Instance();
   UserInfo* user = engine->GetUser(msg.user_id);
   OrderFilterList filters;
   time_t b = util->to_timestamp(msg.begin_time);
   time_t e = util->to_timestamp(msg.end_time);
+  filters.push_back(new OrderFilter(msg.group_id));
   filters.push_back(new OrderDealTimeFilter(b, e));
   filters.push_back(new OrderStatusFilter(FINISHED));
   OrderList orders = user->FindOrders(filters);
-  for (size_t i = 0; i < filters.size(); ++i) {
-    delete filters[i];
-  }
 
   for (size_t i = 0; i < orders.size(); ++i) {
     QueryStatementRes::StatementRecord s;
-    s.code = orders[i].code();
-    s.op = orders[i].operation();
-    s.order_price = orders[i].deal_price();
-    s.order_nums = orders[i].deal_num();
-    s.commission = orders[i].commission();
-    s.stamp_duty = orders[i].stamp_duty();
-    s.transfer_fee = orders[i].transfer_fee();
-    s.amount = orders[i].amount();
-    s.available_capital = orders[i].available_capital();
+    s.code = orders[i]->code();
+    s.op = orders[i]->operation();
+    s.order_price = orders[i]->deal_price();
+    s.order_nums = orders[i]->deal_num();
+    s.commission = orders[i]->commission();
+    s.stamp_duty = orders[i]->stamp_duty();
+    s.transfer_fee = orders[i]->transfer_fee();
+    s.amount = orders[i]->amount();
+    s.available_capital = orders[i]->available_capital();
     res.statement_list.push_back(s);
   }
   SendResponse(socket, res);
@@ -544,7 +596,24 @@ void UserLogic::OnQueryStatement(int socket, DictionaryValue& dict) {
 
 void UserLogic::OnSubmitOrder(int socket, DictionaryValue& dict) {
   SubmitOrderReq msg;
+  SubmitOrderRes res;
+
+  // check order time
+  StockUtil* util = StockUtil::Instance();
+  if (util->is_trading_day()) {
+    int h = util->hour();
+    int m = util->min();
+    int t = h*100 + m;
+    if ((t >= 800 && t <= 915) || (t >= 1500 && t <=1700)) {
+      res.status.state = Status::NOT_IN_ORDER_TIME;
+      SendResponse(socket, res);
+      return ;
+    }
+  }
+
   if (!msg.StartDeserialize(dict)) {
+    res.status.state = Status::ERROR_MSG;
+    SendResponse(socket, res);
     return ;
   }
 
@@ -552,7 +621,6 @@ void UserLogic::OnSubmitOrder(int socket, DictionaryValue& dict) {
   msg.StartDump(oss);
   LOG_DEBUG2("%s", oss.str().data());
 
-  SubmitOrderRes res;
   UserInfo* user = engine->GetUser(msg.user_id);
   res.status.state = user->SubmitOrder(msg);
 
@@ -561,7 +629,10 @@ void UserLogic::OnSubmitOrder(int socket, DictionaryValue& dict) {
 
 void UserLogic::OnAvailableStockCount(int socket, DictionaryValue& dict) {
   AvailableStockCountReq msg;
+  AvailableStockCountRes res;
   if (!msg.StartDeserialize(dict)) {
+    res.status.state = Status::ERROR_MSG;
+    SendResponse(socket, res);
     return ;
   }
 
@@ -570,7 +641,6 @@ void UserLogic::OnAvailableStockCount(int socket, DictionaryValue& dict) {
   LOG_DEBUG2("%s", oss.str().data());
 
   StockTotalInfo info;
-  AvailableStockCountRes res;
   if (!engine->GetStockTotalInfoByCode(msg.code, info)) {
     LOG_ERROR2("NOT FIND stock:%s in share", msg.code.data());
     res.status.state = Status::STOCK_NOT_EXIST;
@@ -579,11 +649,20 @@ void UserLogic::OnAvailableStockCount(int socket, DictionaryValue& dict) {
   }
 
   UserInfo* user = engine->GetUser(msg.user_id);
-  size_t count = user->available_capital();
+  StockGroup* g = user->GetGroup(msg.group_id);
+  if (NULL == g) {
+    LOG_ERROR2("NOT EXIST group_id:%d", msg.group_id);
+    res.status = Status::GROUP_NOT_EXIST;
+    SendResponse(socket, res);
+    return ;
+  }
+  StockRealInfo ri;
+  info.GetCurrRealMarketInfo(ri);
   res.code = msg.code;
-  // TODO:
-//  res.name =
-//  res.count = 10000;
+  res.name = info.get_stock_name();
+  // 考虑佣金, 过户费 ?
+  res.count =
+      ((int)(g->available_capital()/ri.price))/100*100;
 
   SendResponse(socket, res);
 }
@@ -591,6 +670,8 @@ void UserLogic::OnAvailableStockCount(int socket, DictionaryValue& dict) {
 void UserLogic::OnCancelOrder(int socket, DictionaryValue& dict) {
   CancelOrderReq msg;
   if (!msg.StartDeserialize(dict)) {
+    Status s = Status::ERROR_MSG;
+    SendResponse(socket, s);
     return ;
   }
 
@@ -605,7 +686,10 @@ void UserLogic::OnCancelOrder(int socket, DictionaryValue& dict) {
 
 void UserLogic::OnProfitAndLossOrderNum(int socket, DictionaryValue& dict) {
   ProfitAndLossOrderNumReq msg;
+  ProfitAndLossOrderNumRes res;
   if (!msg.StartDeserialize(dict)) {
+    res.status.state = Status::ERROR_MSG;
+    SendResponse(socket, res);
     return ;
   }
 
@@ -613,26 +697,73 @@ void UserLogic::OnProfitAndLossOrderNum(int socket, DictionaryValue& dict) {
   msg.StartDump(oss);
   LOG_DEBUG2("%s", oss.str().data());
 
-  ProfitAndLossOrderNumRes res;
   UserInfo* user = engine->GetUser(msg.user_id);
   OrderFilterList filters;
 
   double min = 0.1;
   double max = std::numeric_limits<double>::max();
+  filters.push_back(new OrderFilter(msg.group_id));
   filters.push_back(new OrderProfitFilter(min, max));
   OrderList orders = user->FindOrders(filters);
   res.profit_num = orders.size();
-  delete filters[0];
-  filters.clear();
+  filters.Clear();
 
   min = std::numeric_limits<double>::min();
   max = 0.0;
   filters.push_back(new OrderProfitFilter(min, max));
   orders = user->FindOrders(filters);
   res.loss_num = orders.size();
-  delete filters[0];
 
   SendResponse(socket, res);
+}
+
+void UserLogic::OnModifyInitCapital(int socket, DictionaryValue& dict) {
+  ModifyInitCapitalReq msg;
+  ModifyInitCapitalRes res;
+  if (!msg.StartDeserialize(dict)) {
+    res.status.state = Status::ERROR_MSG;
+    SendResponse(socket, res);
+    return ;
+  }
+
+  std::ostringstream oss;
+  msg.StartDump(oss);
+  LOG_DEBUG2("%s", oss.str().data());
+
+  UserInfo* user = engine->GetUser(msg.user_id);
+  StockGroup* g = user->GetGroup(msg.group_id);
+  if (NULL == g) {
+    res.status.state = Status::GROUP_NOT_EXIST;
+    SendResponse(socket, res);
+    return ;
+  }
+
+  if (msg.capital < 0.0) {
+    res.status.state = Status::FAILED;
+    SendResponse(socket, res);
+    return ;
+  }
+
+  res.status.state = user->OnModifyInitCapital(msg.group_id, msg.capital);
+  res.capital = g->init_capital();
+
+  SendResponse(socket, res);
+}
+
+void UserLogic::ProcessClose() {
+  StockUtil* util = StockUtil::Instance();
+  if (!util->is_trading_day()) {
+    return ;
+  }
+
+  int h = util->hour();
+  int m = util->min();
+  int t = h * 100 + m;
+  if (t < 1500 || t > 1700) {
+    return ;
+  }
+
+  engine->OnCloseMarket();
 }
 
 } /* namespace strade_user */
