@@ -21,6 +21,7 @@ class UserEngine {
   void OnCloseMarket();
   bool exist(UserId id) const { return user_id_map_.count(id); }
   UserInfo* GetUser(UserId id);
+  UserIdMap GetUserMap() const { return user_id_map_; }
  private:
   UserEngine();
   DISALLOW_COPY_AND_ASSIGN(UserEngine);

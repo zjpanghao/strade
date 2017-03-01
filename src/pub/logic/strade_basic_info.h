@@ -82,7 +82,7 @@ class StockRealInfo {
 */
 
 // 历史数据
-class StockHistInfo : public base_logic::AbstractDao{
+class StockHistInfo : public base_logic::AbstractDao {
  public:
   StockHistInfo();
   StockHistInfo(const StockHistInfo& rhs);
@@ -97,27 +97,57 @@ class StockHistInfo : public base_logic::AbstractDao{
   virtual void Deserialize();
 
  public:
-  const std::string& get_hist_date() const {
+  const std::string& code() const {
+    return data_->code_;
+  }
+  void set_code(const std::string& code) {
+    data_->code_ = code;
+  }
+  const std::string& date() const {
     return data_->date_;
   }
-  double get_open() const {
+  void set_hist_date(const std::string& date) {
+    data_->date_ = date;
+  }
+  double open() const {
     return data_->open_;
   }
-  double get_high() const {
+  void set_open(double open) {
+    data_->open_ = open;
+  }
+  double high() const {
     return data_->high_;
   }
-  double get_low() const {
+  void set_high(double high) {
+    data_->high_ = high;
+  }
+  double low() const {
     return data_->low_;
   }
-  double get_close() const {
+  void set_low(double low) {
+    data_->low_ = low;
+  }
+  double close() const {
     return data_->close_;
   }
-  double get_day_yield() const {
+  void set_close(double close) {
+    data_->close_ = close;
+  }
+  double day_yield() const {
     return data_->day_yield_;
   }
-  double get_mid_price() const {
+  void set_day_yield(double yield) {
+    data_->day_yield_ = yield;
+  }
+  double mid_price() const {
     return data_->mid_price_;
   }
+  void set_mid_price(double mid_price) {
+    data_->mid_price_ = mid_price;
+  }
+
+  double volume() const { return data_->volume_; }
+  void set_volume(double volume) { data_->volume_ = volume; }
 
  private:
   class Data {
@@ -137,11 +167,13 @@ class StockHistInfo : public base_logic::AbstractDao{
         delete this;
     }
    public:
+    std::string code_;
     std::string date_;
     double open_;
     double high_;
     double close_;
     double low_;
+    double volume_;
 
     double mid_price_;
     double qfq_close_;
@@ -190,6 +222,8 @@ class StockTotalInfo : public base_logic::AbstractDao {
       const time_t trade_time, const StockRealInfo& stock_real_info);
 
   bool GetCurrRealMarketInfo(StockRealInfo& stock_real_info);
+
+  bool GetStockYestodayStockHist(StockHistInfo& stock_hist_info);
 
  public:
   const std::string& get_stock_code() const {

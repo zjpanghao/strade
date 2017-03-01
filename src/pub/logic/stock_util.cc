@@ -5,8 +5,6 @@
 
 namespace stock_logic {
 
-StockUtil* StockUtil::instance_ = NULL;
-
 int StockUtil::MONTH_DAY[] = {
     // Dec,Jan, ... ,Nov
     31, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30

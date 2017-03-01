@@ -8,9 +8,11 @@ namespace base_logic {
 
 MysqlEngine::MysqlEngine(
     base::ConnAddr& read_addr,
-    base::ConnAddr& write_addr)
+    base::ConnAddr& write_addr,
+    bool isAsync)
     : read_addr_(read_addr),
-      write_addr_(write_addr) {
+      write_addr_(write_addr),
+      async_(isAsync) {
   Initialize();
 }
 
@@ -21,13 +23,16 @@ MysqlEngine::~MysqlEngine() {
 void MysqlEngine::Initialize() {
   CreateMysqlReadEnginePool(MYSQL_READ_ENGINE_NUM);
   CreateMysqlWriteEnginePool(MYSQL_WRITE_ENGINE_NUM);
-  int ret = pthread_create(&mysql_thread_,
-                           NULL,
-                           MysqlThread::Run,
-                           &shared_info_);
-  if (0 != ret) {
-    LOG_ERROR("mysql async thread create error");
-    assert(0);
+
+  if (async_) {
+    int ret = pthread_create(&mysql_thread_,
+                             NULL,
+                             MysqlThread::Run,
+                             &shared_info_);
+    if (0 != ret) {
+      LOG_ERROR("mysql async thread create error");
+      assert(0);
+    }
   }
 }
 
@@ -97,10 +102,13 @@ bool MysqlEngine::AddAsyncMysqlJob(int column_num,
                                    MysqlCallback callback,
                                    MYSQL_JOB_TYPE type,
                                    void* param) {
-  MySqlJobAdapter* job = new MySqlJobAdapter(
-      type, sql, column_num, callback, param);
-  shared_info_.PushMysqlJob(job);
-  return true;
+  if (async_) {
+    MySqlJobAdapter* job = new MySqlJobAdapter(
+        type, sql, column_num, callback, param);
+    shared_info_.PushMysqlJob(job);
+    return true;
+  }
+  return false;
 }
 
 } /* namespace base_logic */
