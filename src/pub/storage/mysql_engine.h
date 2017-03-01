@@ -117,6 +117,7 @@ struct MysqlEngineSharedInfo {
         pthread_mutex_lock(&mutex_);
         engine = db_write_pool_.front();
         db_write_pool_.pop_front();
+        CheckConnect(engine, MYSQL_WRITE);
         break;
       }
       case MYSQL_READ: {
@@ -124,6 +125,7 @@ struct MysqlEngineSharedInfo {
         pthread_mutex_lock(&mutex_);
         engine = db_read_pool_.front();
         db_read_pool_.pop_front();
+        CheckConnect(engine, MYSQL_READ);
         break;
       }
       default: {
@@ -161,6 +163,33 @@ struct MysqlEngineSharedInfo {
     pthread_mutex_unlock(&mutex_);
   }
 
+  bool CheckConnect(base_storage::DBStorageEngine* engine,
+                    MYSQL_JOB_TYPE type) {
+    bool r = false;
+    r = engine->CheckConnect();
+    if (r) {
+      return true;
+    }
+    // reconnect
+    int i = 0;
+    do {
+      if (type == MYSQL_READ) {
+        r = engine->Connections(read_addr_list_);
+      } else {
+        r = engine->Connections(write_addr_list_);
+      }
+      if (r) {
+        LOG_MSG("mysql lost connection, reconnect success");
+        break;
+      }
+      ++i;
+      LOG_ERROR2("mysql lost connection try:%d connected failed, 5s retry", i);
+      sleep(5);
+    } while (true);
+
+    return r;
+  }
+
   sem_t task_num_;
   sem_t read_engine_num_;
   sem_t write_engien_num_;
@@ -170,6 +199,8 @@ struct MysqlEngineSharedInfo {
   MYSQL_ENGINE_POOL db_write_pool_;
 
   MYSQL_TASK_QUEUE task_queue_;
+  std::list<base::ConnAddr> read_addr_list_;
+  std::list<base::ConnAddr> write_addr_list_;
 };
 
 struct MySqlJobAdapter {

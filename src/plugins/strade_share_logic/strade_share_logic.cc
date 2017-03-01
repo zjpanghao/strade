@@ -31,7 +31,6 @@ bool StradeShareLogic::OnIniTimer(struct server* srv) {
 
 bool StradeShareLogic::OnTimeout(
     struct server* srv, char* id, int opcode, int time) {
-
   switch (opcode) {
     case ONTIME_LOAD_STOCK_VISIT_TIME: {
       timer_handle_->OnTimeLoadStockVisit();
