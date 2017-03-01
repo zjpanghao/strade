@@ -20,6 +20,8 @@
 #define SHARE_LIB_PATH          "./strade_share/strade_share.so"
 #define SHARE_LIB_HANDLER       "GetStradeShareEngine"
 
+#define TIMER_CHECK_CLOSE       0
+
 using base_logic::ValueSerializer;
 
 
@@ -53,9 +55,11 @@ UserLogic::UserLogic() {
   engine = (*handler)();
   if (engine == NULL)
     assert(0);
-  engine->Init();
 
   StockGroup::engine_ = engine;
+  UserInfo::engine_ = engine;
+
+  engine->Init();
   LOG_DEBUG2("user logic engine: %p", engine);
 }
 
@@ -231,10 +235,18 @@ bool UserLogic::OnBroadcastClose(struct server *srv, const int socket) {
 }
 
 bool UserLogic::OnIniTimer(struct server *srv) {
+  srv->add_time_task(srv, "user", 1, 5, -1);
   return true;
 }
 
 bool UserLogic::OnTimeout(struct server *srv, char *id, int opcode, int time) {
+  switch (opcode) {
+    case TIMER_CHECK_CLOSE:
+      ProcessClose();
+      break;
+    default:
+      break;
+  }
   return true;
 }
 
@@ -457,18 +469,18 @@ void UserLogic::OnQueryTodayOrder(int socket, DictionaryValue& dict) {
   OrderList orders = user->FindOrders(filters);
   for (size_t i = 0; i < orders.size(); ++i) {
     QueryTodayOrdersRes::OrderInfo o;
-    o.id = orders[i].id();
-    o.code = orders[i].code();
+    o.id = orders[i]->id();
+    o.code = orders[i]->code();
     if (!engine->GetStockTotalInfoByCode(o.code, info)) {
       LOG_ERROR2("NOT FIND stock:%s in share", o.code.data());
       continue;
     }
     o.name = info.get_stock_name();
-    o.op = orders[i].operation();
-    o.order_price = orders[i].order_price();
-    o.order_nums = orders[i].order_num();
-    o.order_time = orders[i].craete_time();
-    o.status = orders[i].status();
+    o.op = orders[i]->operation();
+    o.order_price = orders[i]->order_price();
+    o.order_nums = orders[i]->order_num();
+    o.order_time = orders[i]->craete_time();
+    o.status = orders[i]->status();
     res.order_list.push_back(o);
   }
   SendResponse(socket, res);
@@ -497,12 +509,12 @@ void UserLogic::OnQueryTodayFinishedOrder(int socket, DictionaryValue& dict) {
   OrderList orders = user->FindOrders(filters);
   for (size_t i = 0; i < orders.size(); ++i) {
     QueryTodayFinishedOrdersRes::OrderInfo o;
-    o.code = orders[i].code();
-    o.op = orders[i].operation();
-    o.order_price = orders[i].deal_price();
-    o.order_nums = orders[i].deal_num();
-    o.order_time = orders[i].deal_time();
-    o.amount = orders[i].amount();
+    o.code = orders[i]->code();
+    o.op = orders[i]->operation();
+    o.order_price = orders[i]->deal_price();
+    o.order_nums = orders[i]->deal_num();
+    o.order_time = orders[i]->deal_time();
+    o.amount = orders[i]->amount();
     res.order_list.push_back(o);
   }
   SendResponse(socket, res);
@@ -533,12 +545,12 @@ void UserLogic::OnQueryHistoryFinishedOrder(int socket, DictionaryValue& dict) {
 
   for (size_t i = 0; i < orders.size(); ++i) {
     QueryHistoryFinishedOrdersRes::OrderInfo o;
-    o.code = orders[i].code();
-    o.op = orders[i].operation();
-    o.order_price = orders[i].deal_price();
-    o.order_nums = orders[i].deal_num();
-    o.order_time = orders[i].deal_time();
-    o.amount = orders[i].amount();
+    o.code = orders[i]->code();
+    o.op = orders[i]->operation();
+    o.order_price = orders[i]->deal_price();
+    o.order_nums = orders[i]->deal_num();
+    o.order_time = orders[i]->deal_time();
+    o.amount = orders[i]->amount();
     res.order_list.push_back(o);
   }
   SendResponse(socket, res);
@@ -568,15 +580,15 @@ void UserLogic::OnQueryStatement(int socket, DictionaryValue& dict) {
 
   for (size_t i = 0; i < orders.size(); ++i) {
     QueryStatementRes::StatementRecord s;
-    s.code = orders[i].code();
-    s.op = orders[i].operation();
-    s.order_price = orders[i].deal_price();
-    s.order_nums = orders[i].deal_num();
-    s.commission = orders[i].commission();
-    s.stamp_duty = orders[i].stamp_duty();
-    s.transfer_fee = orders[i].transfer_fee();
-    s.amount = orders[i].amount();
-    s.available_capital = orders[i].available_capital();
+    s.code = orders[i]->code();
+    s.op = orders[i]->operation();
+    s.order_price = orders[i]->deal_price();
+    s.order_nums = orders[i]->deal_num();
+    s.commission = orders[i]->commission();
+    s.stamp_duty = orders[i]->stamp_duty();
+    s.transfer_fee = orders[i]->transfer_fee();
+    s.amount = orders[i]->amount();
+    s.available_capital = orders[i]->available_capital();
     res.statement_list.push_back(s);
   }
   SendResponse(socket, res);
@@ -585,6 +597,20 @@ void UserLogic::OnQueryStatement(int socket, DictionaryValue& dict) {
 void UserLogic::OnSubmitOrder(int socket, DictionaryValue& dict) {
   SubmitOrderReq msg;
   SubmitOrderRes res;
+
+  // check order time
+  StockUtil* util = StockUtil::Instance();
+  if (util->is_trading_day()) {
+    int h = util->hour();
+    int m = util->min();
+    int t = h*100 + m;
+    if ((t >= 800 && t <= 915) || (t >= 1500 && t <=1700)) {
+      res.status.state = Status::NOT_IN_ORDER_TIME;
+      SendResponse(socket, res);
+      return ;
+    }
+  }
+
   if (!msg.StartDeserialize(dict)) {
     res.status.state = Status::ERROR_MSG;
     SendResponse(socket, res);
@@ -624,7 +650,7 @@ void UserLogic::OnAvailableStockCount(int socket, DictionaryValue& dict) {
 
   UserInfo* user = engine->GetUser(msg.user_id);
   StockGroup* g = user->GetGroup(msg.group_id);
-  if (NULL != g) {
+  if (NULL == g) {
     LOG_ERROR2("NOT EXIST group_id:%d", msg.group_id);
     res.status = Status::GROUP_NOT_EXIST;
     SendResponse(socket, res);
@@ -722,6 +748,22 @@ void UserLogic::OnModifyInitCapital(int socket, DictionaryValue& dict) {
   res.capital = g->init_capital();
 
   SendResponse(socket, res);
+}
+
+void UserLogic::ProcessClose() {
+  StockUtil* util = StockUtil::Instance();
+  if (!util->is_trading_day()) {
+    return ;
+  }
+
+  int h = util->hour();
+  int m = util->min();
+  int t = h * 100 + m;
+  if (t < 1500 || t > 1700) {
+    return ;
+  }
+
+  engine->OnCloseMarket();
 }
 
 } /* namespace strade_user */
