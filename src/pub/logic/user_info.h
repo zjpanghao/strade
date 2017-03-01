@@ -17,7 +17,13 @@
 #include "thread/base_thread_lock.h"
 #include "dao/abstract_dao.h"
 
+namespace strade_share {
+class SSEngine;
+}
+
 namespace strade_user {
+
+using strade_share::SSEngine;
 
 class UserInfo;
 typedef std::vector<UserInfo> UserList;
@@ -37,6 +43,7 @@ class UserInfo : public base_logic::AbstractDao {
     AVAILABLE_CAPITAL,
     FROZEN_CAPITAL
   };
+  static SSEngine* engine_;
  public:
   UserInfo();
   REFCOUNT_DECLARE(UserInfo);
@@ -64,7 +71,9 @@ class UserInfo : public base_logic::AbstractDao {
   void OnOrderDone(OrderInfo* order);
   Status::State OnCancelOrder(OrderId order_id);
   Status::State OnModifyInitCapital(GroupId group_id, double capital);
+  void OnCloseMarket();
  private:
+  Status::State CancleOrder(OrderInfo* order);
   StockGroup* GetGroupWithNonLock(GroupId group_id);
   void Deserialize();
   bool InitStockGroup();

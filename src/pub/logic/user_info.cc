@@ -12,13 +12,13 @@
 
 namespace strade_user {
 
+using strade_logic::StockRealInfo;
+using strade_share::STOCK_REAL_MAP;
+
 const char UserInfo::kGetAllUserInfoSql[] =
     "SELECT `userId`, `userName`, `password`, `platformId`, `userLevel`, `email`, `phone`, `availableCapital`, `frozenCapital` FROM `user_info`";
 
-using strade_share::SSEngine;
-using strade_share::STOCK_REAL_MAP;
-using strade_logic::StockRealInfo;
-
+SSEngine* UserInfo::engine_ = NULL;
 UserInfo::UserInfo() {
   data_ = new Data();
 }
@@ -49,8 +49,8 @@ bool UserInfo::Init() {
 }
 
 bool UserInfo::InitStockGroup() {
-  SSEngine* engine = GetStradeShareEngine();
   std::vector<StockGroup> sgs;
+  SSEngine* engine = GetStradeShareEngine();
   if (!engine->ReadData(StockGroup::GetUserGroupSql(data_->id_), sgs)) {
     LOG_ERROR2("init user:%s stock group error", data_->name_.data());
     return false;
@@ -121,16 +121,19 @@ bool UserInfo::InitOrder() {
       LOG_ERROR("init order error");
       continue;
     }
-    data_->order_list_.push_back(o);
+    data_->order_list_.push_back(new OrderInfo(o));
 
     if (o.status() == PENDING) {
       size_t last = data_->order_list_.size()-1;
-      GroupStockPosition *g = GetGroupStockPosition(o.group_id(), o.code());
-      assert(NULL != g);
-      assert(g->Delegate(o.order_num()));
-      engine->AttachObserver(&data_->order_list_[last]);
+      if (o.operation() == SELL) {
+        GroupStockPosition *g = GetGroupStockPosition(o.group_id(), o.code());
+        assert(NULL != g);
+        assert(g->Delegate(o.order_num()));
+      }
+      engine->AttachObserver(data_->order_list_[last]);
     }
   }
+
   LOG_MSG2("user:%s init %d orders",
            data_->name_.data(), orders.size());
 
@@ -146,8 +149,8 @@ void UserInfo::BindOrder() {
       OrderId order_id = fps[j].order_id();
       OrderInfo* p = NULL;
       for (size_t k = 0; k < data_->order_list_.size(); ++k) {
-        if (data_->order_list_[k].id() == order_id) {
-          p = &data_->order_list_[k];
+        if (data_->order_list_[k]->id() == order_id) {
+          p = data_->order_list_[k];
           break;
         }
       }
@@ -276,7 +279,7 @@ OrderList UserInfo::FindOrders(const OrderFilterList& filters) {
   for (size_t i = 0; i < data_->order_list_.size(); ++i) {
     bool filter = false;
     for (size_t j = 0; j < filters.size(); ++j) {
-      if (filters[j]->filter(data_->order_list_[i])) {
+      if (filters[j]->filter(*data_->order_list_[i])) {
         filter = true;
         break;
       }
@@ -395,14 +398,13 @@ Status::State UserInfo::SubmitOrder(SubmitOrderReq& req) {
     return Status::GROUP_NOT_EXIST;
   }
 
-  if (g->exist_stock(req.code)) {
-    LOG_ERROR2("user:%s submit order error: stock:%s not in group:%s",
-               data_->name_.data(), req.code.data(), g->name().data());
-    return Status::STOCK_NOT_IN_GROUP;
-  }
+//  if (!g->exist_stock(req.code)) {
+//    LOG_ERROR2("user:%s submit order error: stock:%s not in group:%s",
+//               data_->name_.data(), req.code.data(), g->name().data());
+//    return Status::STOCK_NOT_IN_GROUP;
+//  }
 
-  SSEngine* engine = GetStradeShareEngine();
-  STOCK_REAL_MAP stock = engine->GetStockRealInfoMapCopy(req.code);
+  STOCK_REAL_MAP stock = engine_->GetStockRealInfoMapCopy(req.code);
   if (stock.empty()) {
     LOG_ERROR2("stock:%s NOT EXIST", req.code.data());
     return Status::STOCK_NOT_EXIST;
@@ -435,18 +437,18 @@ Status::State UserInfo::SubmitOrder(SubmitOrderReq& req) {
       << req.order_nums << ","
       << frozen << ")";
   MYSQL_ROWS_VEC row;
-  if (!engine->ExcuteStorage(1, oss.str(), row)) {
+  if (!engine_->ExcuteStorage(1, oss.str(), row)) {
     LOG_ERROR2("user:%s submit order error: mysql error",
                data_->name_.data());
     return Status::MYSQL_ERROR;
   }
-  assert(!row.empty());
+  assert(!row.empty() && !row[0].empty());
   OrderId order_id = atoi(row[0][0].data());
   LOG_MSG2("user:%s new order:%d, code:%s, count:%d",
-           data_->name_.data(), order_id, req.order_nums);
+           data_->name_.data(), order_id, req.code.data(), req.order_nums);
 
-  data_->order_list_.push_back(OrderInfo(data_->id_, order_id));
-  OrderInfo* order = &data_->order_list_[data_->order_list_.size()-1];
+  data_->order_list_.push_back(new OrderInfo(data_->id_, order_id));
+  OrderInfo* order = data_->order_list_[data_->order_list_.size()-1];
   order->Init(req);
   order->set_frozen(frozen);
 
@@ -458,7 +460,7 @@ Status::State UserInfo::SubmitOrder(SubmitOrderReq& req) {
   }
 
   // cannot make a deal now, register callback
-  engine->AttachObserver(order);
+  engine_->AttachObserver(order);
   UnlockThreadrw(data_->lock_);
   return Status::SUCCESS;
 }
@@ -529,8 +531,8 @@ bool UserInfo::OnBuyOrderDone(OrderInfo* order) {
   LOG_MSG2("user:%s new order:%d, code:%s, count:%d",
            data_->name_.data(), order_id, order->deal_num());
 
-  data_->order_list_.push_back(OrderInfo(data_->id_, order_id, OrderInfo::AUTO_ORDER));
-  OrderInfo* new_order = &data_->order_list_[data_->order_list_.size()-1];
+  data_->order_list_.push_back(new OrderInfo(data_->id_, order_id, OrderInfo::AUTO_ORDER));
+  OrderInfo* new_order = data_->order_list_[data_->order_list_.size()-1];
   new_order->Init(*order);
 
   gp->Delegate(order->deal_num());
@@ -630,8 +632,7 @@ Status::State UserInfo::OnCancelBuyOrder(const OrderInfo* order) {
   // 2. update user available and frozen capital
   std::ostringstream oss;
   oss << "CALL proc_CancelBuyDelegation(" << order->id() << ")";
-  SSEngine* engine = GetStradeShareEngine();
-  if (!engine->WriteData(oss.str())) {
+  if (!engine_->WriteData(oss.str())) {
     LOG_ERROR2("user:%s cancel buy order mysql error", data_->name_.data());
     return Status::MYSQL_ERROR;
   }
@@ -647,12 +648,28 @@ Status::State UserInfo::OnCancelSellOrder(const OrderInfo* order) {
   // update delegation_record status
   std::ostringstream oss;
   oss << "CALL proc_CancelSaleDelegation(" << order->id() << ")";
-  SSEngine* engine = GetStradeShareEngine();
-  if (!engine->WriteData(oss.str())) {
+  if (!engine_->WriteData(oss.str())) {
     LOG_ERROR2("user:%s cancel sell order mysql error", data_->name_.data());
     return Status::MYSQL_ERROR;
   }
   return Status::SUCCESS;
+}
+
+Status::State UserInfo::CancleOrder(OrderInfo* order) {
+  if (NULL == order) {
+    return Status::FAILED;
+  }
+
+  Status::State status;
+  order->OnOrderCancel();
+  if (BUY == order->operation()) {
+     status = OnCancelBuyOrder(order);
+  }
+
+  if (SELL == order->operation()) {
+    status = OnCancelSellOrder(order);
+  }
+  return status;
 }
 
 Status::State UserInfo::OnCancelOrder(OrderId order_id) {
@@ -660,7 +677,7 @@ Status::State UserInfo::OnCancelOrder(OrderId order_id) {
   OrderList::iterator order = data_->order_list_.end();
   for (OrderList::iterator it = data_->order_list_.begin();
       data_->order_list_.end() != it; ++it) {
-    if (it->id() == order_id) {
+    if ((*it)->id() == order_id) {
       order = it;
       break;
     }
@@ -669,17 +686,10 @@ Status::State UserInfo::OnCancelOrder(OrderId order_id) {
     return Status::ORDER_NOT_EXIST;
   }
 
-  order->OnOrderCancel();
-
-  if (BUY == order->operation()) {
-     status = OnCancelBuyOrder(&*order);
-  }
-
-  if (SELL == order->operation()) {
-    status = OnCancelSellOrder(&*order);
-  }
+  status = CancleOrder(*order);
 
   // remove order
+  delete *order;
   data_->order_list_.erase(order);
   return status;
 }
@@ -695,18 +705,31 @@ Status::State UserInfo::OnModifyInitCapital(GroupId group_id, double capital) {
   }
   g->add_init_capital(capital);
 
-  // TODO: update mysql
   std::ostringstream oss;
   oss << "UPDATE `group_info` "
       << "SET `initCapital` = " << g->init_capital() << ","
       << "`availableCapital` = " << g->available_capital()
       << " WHERE `groupId` = " << g->id() << " AND `userId` = " << data_->id_;
-  SSEngine* engine = GetStradeShareEngine();
-  if (!engine->WriteData(oss.str())) {
+  if (!engine_->WriteData(oss.str())) {
     LOG_ERROR2("user:%s modify init capital mysql error", data_->name_.data());
     return Status::MYSQL_ERROR;
   }
   return Status::SUCCESS;
+}
+
+void UserInfo::OnCloseMarket() {
+  OrderList tmp;
+  for (size_t i = 0; i < data_->order_list_.size(); ++i) {
+    if (data_->order_list_[i]->status() == PENDING) {
+      CancleOrder(data_->order_list_[i]);
+      delete data_->order_list_[i];
+    } else {
+      tmp.push_back(data_->order_list_[i]);
+    }
+  }
+
+  // remove from cache
+  data_->order_list_.swap(tmp);
 }
 
 } /* namespace strade_user */
