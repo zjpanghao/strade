@@ -170,25 +170,23 @@ bool StockGroup::DelStocks(StockCodeList& stocks) {
     }
   }
 
-  // update mysql
-  // update mysql
-  std::ostringstream oss;
-  oss << "REPLACE INTO `group_stock`(`groupId`, `stockCode`, `status`) VALUES";
-  for (size_t i = 0; i < s.size(); ++i) {
-    oss << "(" << data_->id_ << ","
-        << "'" << s[i] << "'" << ","
-        << int(INVALID) << "),";
-  }
-  std::string sql = oss.str();
-  sql.erase(sql.size()-1);
-  LOG_DEBUG2("del stock list sql: %s", sql.data());
+  if (!s.empty()) {
+    std::ostringstream oss;
+    oss << "REPLACE INTO `group_stock`(`groupId`, `stockCode`, `status`) VALUES";
+    for (size_t i = 0; i < s.size(); ++i) {
+      oss << "(" << data_->id_ << "," << "'" << s[i] << "'" << ","
+          << int(INVALID) << "),";
+    }
+    std::string sql = oss.str();
+    sql.erase(sql.size() - 1);
+    LOG_DEBUG2("del stock list sql: %s", sql.data());
 
 //  SSEngine* engine = GetStradeShareEngine();
-  if (!engine_->WriteData(sql)) {
-    LOG_ERROR2("user:%d del stock to group:%s error",
-               data_->user_id_, data_->name_.data());
+    if (!engine_->WriteData(sql)) {
+      LOG_ERROR2("user:%d del stock to group:%s error",
+          data_->user_id_, data_->name_.data());
+    }
   }
-
   stocks.swap(s);
   data_->stock_list_.swap(t);
   return stocks.size() == n;
