@@ -42,7 +42,7 @@ bool StradeShareDB::FetchStockHistList(const std::string& stock_code,
                                        std::vector<StockHistInfo>& stock_hist_vec) {
   std::string SQL =
       "SELECT date, open, high, close, low, qfq_close FROM algo_get_hist_data WHERE CODE = '"
-          + stock_code + "' ORDER BY DATE DESC LIMIT 60;";
+          + stock_code + "' ORDER BY DATE DESC;";
   return mysql_engine_->ReadData<StockHistInfo>(SQL, stock_hist_vec);
 }
 

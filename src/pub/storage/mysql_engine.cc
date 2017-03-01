@@ -32,8 +32,7 @@ void MysqlEngine::Initialize() {
 }
 
 bool MysqlEngine::CreateMysqlReadEnginePool(int32 pool_num) {
-  std::list<base::ConnAddr> read_addr_list;
-  read_addr_list.push_back(read_addr_);
+  shared_info_.read_addr_list_.push_back(read_addr_);
   for (int i = 0; i < pool_num; ++i) {
     bool r = false;
     base_storage::DBStorageEngine* read_engine =
@@ -43,7 +42,7 @@ bool MysqlEngine::CreateMysqlReadEnginePool(int32 pool_num) {
       assert(0);
     }
     // Create read engine
-    r = read_engine->Connections(read_addr_list);
+    r = read_engine->Connections(shared_info_.read_addr_list_);
     if (!r) {
       LOG_ERROR("db conntion error");
       assert(0);
@@ -54,8 +53,7 @@ bool MysqlEngine::CreateMysqlReadEnginePool(int32 pool_num) {
 }
 
 bool MysqlEngine::CreateMysqlWriteEnginePool(int32 pool_num) {
-  std::list<base::ConnAddr> write_addr_list;
-  write_addr_list.push_back(write_addr_);
+  shared_info_.write_addr_list_.push_back(write_addr_);
   // Create write engine
   for (int i = 0; i < pool_num; ++i) {
     bool r = false;
@@ -65,7 +63,7 @@ bool MysqlEngine::CreateMysqlWriteEnginePool(int32 pool_num) {
       LOG_ERROR("create db conntion error");
       assert(0);
     }
-    r = write_engine->Connections(write_addr_list);
+    r = write_engine->Connections(shared_info_.write_addr_list_);
     if (!r) {
       LOG_ERROR("db conntion error");
       assert(0);
