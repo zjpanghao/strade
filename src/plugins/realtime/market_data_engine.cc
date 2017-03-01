@@ -248,7 +248,7 @@ void DataEngine::OnTime() {
   base_logic::WLockGd lock(lock_);
 
   ++current_->tick;
-  if (!(StockUtil::instance_->is_trading_day()
+  if (!(StockUtil::Instance()->is_trading_day()
       && is_work_time())) {
     initialized_ = false;
     return ;

@@ -50,7 +50,6 @@ typedef std::queue<MySqlJobAdapter*> MYSQL_TASK_QUEUE;
 
 struct MysqlEngineSharedInfo {
   MysqlEngineSharedInfo() {
-
     sem_init(&task_num_, 0, 0);                                 // 当前任务数，初始为0
     sem_init(&read_engine_num_, 0, MYSQL_READ_ENGINE_NUM);            // 读连接数
     sem_init(&write_engien_num_, 0, MYSQL_WRITE_ENGINE_NUM);          // 写连接数
@@ -61,7 +60,7 @@ struct MysqlEngineSharedInfo {
     pthread_mutex_destroy(&mutex_);
     sem_destroy(&read_engine_num_);
     sem_destroy(&write_engien_num_);
-    if (!db_read_pool_.empty()) {
+    while (!db_read_pool_.empty()) {
       base_storage::DBStorageEngine* engine = db_read_pool_.front();
       db_read_pool_.pop_front();
       if (engine) {
@@ -70,7 +69,7 @@ struct MysqlEngineSharedInfo {
         engine = NULL;
       }
     }
-    if (!db_write_pool_.empty()) {
+    while (!db_write_pool_.empty()) {
       base_storage::DBStorageEngine* engine = db_write_pool_.front();
       db_write_pool_.pop_front();
       if (engine) {
@@ -91,8 +90,9 @@ struct MysqlEngineSharedInfo {
         break;
       }
       job = task_queue_.front();
-      if (NULL != job) {
-        task_queue_.pop();
+      task_queue_.pop();
+      if(NULL == job) {
+        continue;
       }
       r = true;
     } while (0);
@@ -353,7 +353,8 @@ struct MysqlThread {
 class MysqlEngine {
  public:
   MysqlEngine(base::ConnAddr& read_addr,
-              base::ConnAddr& write_addr);
+              base::ConnAddr& write_addr,
+              bool isAsync = false);
   ~MysqlEngine();
 
  private:
@@ -391,6 +392,7 @@ class MysqlEngine {
                         void* param = NULL);
 
  private:
+  bool async_;
   base::ConnAddr read_addr_;
   base::ConnAddr write_addr_;
   MysqlEngineSharedInfo shared_info_;
