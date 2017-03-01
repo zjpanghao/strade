@@ -48,4 +48,11 @@ UserInfo* UserEngine::GetUser(UserId id) {
   return &it->second;
 }
 
+void UserEngine::OnCloseMarket() {
+  for (UserIdMap::iterator it = user_id_map_.begin();
+      user_id_map_.end() != it; ++it) {
+    it->second.OnCloseMarket();
+  }
+}
+
 } /* namespace strade_user */

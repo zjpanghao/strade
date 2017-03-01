@@ -123,9 +123,12 @@ stock_position.o : ./$(USER_DIR)/logic/stock_position.cc ./$(USER_DIR)/logic/sto
 
 order_info.o : ./$(USER_DIR)/logic/order_info.cc ./$(USER_DIR)/logic/order_info.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./$(USER_DIR)/logic/order_info.cc $(INCLUDE_PATHS)
+	
+stock_util.o : ./$(USER_DIR)/logic/stock_util.cc ./$(USER_DIR)/logic/stock_util.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./$(USER_DIR)/logic/stock_util.cc $(INCLUDE_PATHS)
 		
 $(PLUGIN) : basictypes.o config.o strade_share_engine.o strade_share_db.o strade_basic_info.o mysql_engine.o\
-	observer.o subject.o abstract_dao.o user_engine.o user_info.o stock_group.o stock_position.o order_info.o\
+	observer.o subject.o abstract_dao.o user_engine.o user_info.o stock_group.o stock_position.o order_info.o stock_util.o\
 	$(CUSTOM_THIRD_PATH)/dmg_fp/lib/dmg_fp.a $(LIB_DIR)/base/lib/mybase.a $(LIB_DIR)/third_party/lib/libhiredis.a
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LINK_PATHS)  -lpthread -lexpat -lrt -ldl -lmysqlclient \
 	$^  -o $@ -lexpat -lmysqlclient

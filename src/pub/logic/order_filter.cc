@@ -6,6 +6,13 @@
 
 namespace strade_user {
 
+bool OrderFilter::filter(const OrderInfo& order) {
+  if (0 == group_id_
+      || order.group_id() == group_id_)
+    return false;
+  return true;
+}
+
 bool OrderOperationFilter::filter(const OrderInfo& order) {
   if (order.operation() == op_) {
     return false;

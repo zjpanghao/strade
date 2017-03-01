@@ -269,4 +269,9 @@ bool SSEngineImpl::AddMysqlAsyncJob(int column_num,
   return strade_share_db_->AddAsyncMysqlJob(column_num, sql, callback, type, param);
 }
 
+bool SSEngineImpl::OnCloseMarket() {
+  user_engine_->OnCloseMarket();
+  return true;
+}
+
 } /* namespace strade_share */

@@ -17,7 +17,13 @@
 #include "thread/base_thread_lock.h"
 #include "dao/abstract_dao.h"
 
+namespace strade_share {
+class SSEngine;
+}
+
 namespace strade_user {
+
+using strade_share::SSEngine;
 
 class UserInfo;
 typedef std::vector<UserInfo> UserList;
@@ -37,6 +43,7 @@ class UserInfo : public base_logic::AbstractDao {
     AVAILABLE_CAPITAL,
     FROZEN_CAPITAL
   };
+  static SSEngine* engine_;
  public:
   UserInfo();
   REFCOUNT_DECLARE(UserInfo);
@@ -51,6 +58,7 @@ class UserInfo : public base_logic::AbstractDao {
   // not include default group
   GroupStockPositionList GetAllGroupStockPosition();
   GroupStockPosition* GetGroupStockPosition(GroupId group_id, const std::string& code);
+  GroupStockPositionList GetGroupStockPosition(GroupId group_id);
   Status::State AddStock(GroupId group_id, StockCodeList& code_list);
   Status::State DelStock(GroupId group_id, StockCodeList& code_list);
   StockGroupList GetAllGroups() const { return data_->stock_group_list_; }
@@ -62,8 +70,11 @@ class UserInfo : public base_logic::AbstractDao {
   Status::State SubmitOrder(SubmitOrderReq& req);
   void OnOrderDone(OrderInfo* order);
   Status::State OnCancelOrder(OrderId order_id);
-
+  Status::State OnModifyInitCapital(GroupId group_id, double capital);
+  void OnCloseMarket();
  private:
+  Status::State CancleOrder(OrderInfo* order);
+  StockGroup* GetGroupWithNonLock(GroupId group_id);
   void Deserialize();
   bool InitStockGroup();
   bool InitStockPosition();
@@ -87,11 +98,6 @@ class UserInfo : public base_logic::AbstractDao {
   std::string phone() const { return data_->phone_; }
   void set_phone(const std::string& phone) { data_->phone_ = phone; }
 
-  double frozen_capital() const { return data_->frozen_capital_; }
-
-  double available_capital() const { return data_->available_capital_; }
-  void set_available_capital(double available_capital) { data_->available_capital_ = available_capital; }
-
   bool initialized() const { return data_->initialized_; }
  private:
   class Data {
@@ -99,11 +105,9 @@ class UserInfo : public base_logic::AbstractDao {
     Data()
         : refcount_(1),
           id_(0),
-          default_gid_(INVALID_GROUPID),
+//          default_gid_(INVALID_GROUPID),
           platform_id_(-1),
           level_(-1),
-          available_capital_(0.0),
-          frozen_capital_(0.0),
           lock_(NULL),
           initialized_(false) {
       InitThreadrw(&lock_);
@@ -114,7 +118,7 @@ class UserInfo : public base_logic::AbstractDao {
     }
    public:
     UserId id_;
-    GroupId default_gid_;
+//    GroupId default_gid_;
     PlatformId platform_id_;
     UserLevel level_;
     std::string name_;
@@ -123,8 +127,6 @@ class UserInfo : public base_logic::AbstractDao {
     std::string email_;
 
     bool initialized_;
-    double available_capital_;  // 可用资金
-    double frozen_capital_;     // 冻结资金
 
     StockGroupList stock_group_list_;         // 股票组合
     GroupStockPositionList stock_position_list_;   // 当前持仓
