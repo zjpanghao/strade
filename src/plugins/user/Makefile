@@ -125,7 +125,7 @@ observer.o : $(PUB_DIR)/logic/observer.cc $(PUB_DIR)/logic/observer.h
 	
 $(PLUGIN) : user_init.o user_logic.o message.o	logic_unit.o stock_group.o\
 			user_engine.o stock_util.o order_filter.o user_info.o abstract_dao.o\
-			strade_basic_info.o order_info.o observer.o\
+			strade_basic_info.o order_info.o observer.o stock_position.o\
 			$(LIB_DIR)/base/lib/mybase.a 
 			$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LINK_PATHS) -lexpat -lrt -lpthread -liconv -ldl -lcurl -lsasl2 -lmysqlclient -lmemcached -lmemcachedutil  \
 	$^ -o $@

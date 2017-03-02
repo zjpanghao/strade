@@ -255,7 +255,7 @@ Status::State UserInfo::GetGroupStock(GroupId group_id, StockCodeList& stocks) {
 //    group_id = data_->default_gid_;
 //  }
 
-  StockGroup *g = GetGroup(group_id);
+  StockGroup *g = GetGroupWithNonLock(group_id);
   if (NULL == g) {
     LOG_ERROR2("user:%s get group stock error: group_id:%d not exist",
                data_->name_.data(), group_id);
@@ -301,7 +301,7 @@ GroupStockPosition* UserInfo::GetGroupStockPosition(GroupId group_id,
                                           const std::string& code) {
   base_logic::RLockGd lock(data_->lock_);
 
-  StockGroup* g = GetGroup(group_id);
+  StockGroup* g = GetGroupWithNonLock(group_id);
   if (NULL == g) {
     LOG_ERROR2("user:%s get stock position error: group_id:%d not exist",
                data_->name_.data(), group_id);
@@ -320,7 +320,7 @@ GroupStockPosition* UserInfo::GetGroupStockPosition(GroupId group_id,
 GroupStockPosition* UserInfo::GetGroupStockPositionWithNonLock(
                                           GroupId group_id,
                                           const std::string& code) {
-  StockGroup* g = GetGroup(group_id);
+  StockGroup* g = GetGroupWithNonLock(group_id);
   if (NULL == g) {
     LOG_ERROR2("user:%s get stock position error: group_id:%d not exist",
                data_->name_.data(), group_id);
@@ -339,7 +339,7 @@ GroupStockPosition* UserInfo::GetGroupStockPositionWithNonLock(
 GroupStockPositionList UserInfo::GetGroupStockPosition(GroupId group_id) {
   base_logic::RLockGd lock(data_->lock_);
 
-  StockGroup* g = GetGroup(group_id);
+  StockGroup* g = GetGroupWithNonLock(group_id);
   if (NULL == g) {
     LOG_ERROR2("user:%s get stock position error: group_id:%d not exist",
                data_->name_.data(), group_id);
@@ -646,7 +646,7 @@ Status::State UserInfo::OnCancelBuyOrder(const OrderInfo* order) {
   base_logic::WLockGd lock(data_->lock_);
 
   // update user available capital and frozen capital
-  StockGroup* g = GetGroup(order->group_id());
+  StockGroup* g = GetGroupWithNonLock(order->group_id());
   assert(g != NULL);
   g->OnCancelBuyOrder(order->frozen());
 
@@ -663,8 +663,10 @@ Status::State UserInfo::OnCancelBuyOrder(const OrderInfo* order) {
 }
 
 Status::State UserInfo::OnCancelSellOrder(const OrderInfo* order) {
+  base_logic::WLockGd lock(data_->lock_);
+
   GroupStockPosition* p =
-      GetGroupStockPosition(order->group_id(), order->code());
+      GetGroupStockPositionWithNonLock(order->group_id(), order->code());
   assert(p != NULL);
   p->OnOrderCancel(order->order_num());
 
@@ -718,7 +720,9 @@ Status::State UserInfo::OnCancelOrder(OrderId order_id) {
 }
 
 Status::State UserInfo::OnModifyInitCapital(GroupId group_id, double capital) {
-  StockGroup* g = GetGroup(group_id);
+  base_logic::WLockGd lock(data_->lock_);
+
+  StockGroup* g = GetGroupWithNonLock(group_id);
   if (NULL == g) {
     return Status::GROUP_NOT_EXIST;
   }
