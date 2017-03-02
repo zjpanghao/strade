@@ -4,6 +4,7 @@
 
 #include "strade_share_timer.h"
 #include "logic/stock_util.h"
+#include "basic/basic_util.h"
 
 using namespace base_logic;
 using namespace strade_share;
@@ -43,7 +44,7 @@ bool StradeShareTimer::InitParam() {
 void StradeShareTimer::Update(int opcode) {
   switch (opcode) {
     case REALTIME_MARKET_VALUE_UPDATE: {
-//      JudgeUpdateTodayHist();
+      JudgeUpdateTodayHist();
       break;
     }
     default: {
@@ -57,6 +58,7 @@ bool StradeShareTimer::OnTimeLoadStockVisit() {
       "SELECT stock_code, SUM(COUNT) FROM `stock_visit` GROUP BY stock_code";
   ss_engine_->AddMysqlAsyncJob(2, LOAD_STOCK_VISIT_SQL,
                                OnTimeLoadStockVisitCallback, MYSQL_READ);
+  return true;
 }
 
 void StradeShareTimer::OnTimeLoadStockVisitCallback(
@@ -111,6 +113,7 @@ bool StradeShareTimer::JudgeUpdateTodayHist() {
     stock_hist_info.set_high(stock_real_info.high);
     stock_hist_info.set_low(stock_real_info.low);
     stock_hist_info.set_close(stock_real_info.price);
+    stock_hist_info.set_volume(stock_real_info.vol);
     double mid_price =
         (stock_real_info.high +
             stock_real_info.low +
@@ -150,7 +153,8 @@ void StradeShareTimer::WriteStockCurrHistTODB(
   ss << "`open`,";
   ss << "`high`,";
   ss << "`close`,";
-  ss << "`low`)";
+  ss << "`low`,";
+  ss << "`volume`)";
   ss << " VALUES (";
 
   size_t total_num = today_hist.size();
@@ -158,7 +162,9 @@ void StradeShareTimer::WriteStockCurrHistTODB(
   for (size_t i = 1; i < total_num; ++i) {
     ss << ",(" << SerializeStockHistSql(ss, today_hist.at(i)).c_str() << ")";
   }
-  ss_engine_->WriteData(ss.str());
+
+  //TODO 此处先改为 test库更新历史数据时通过触发器写入strade库
+  //ss_engine_->WriteData(ss.str());
 }
 
 std::string StradeShareTimer::SerializeStockHistSql(
@@ -168,7 +174,8 @@ std::string StradeShareTimer::SerializeStockHistSql(
   ss << stock_real_info.open << ",";
   ss << stock_real_info.high << ",";
   ss << stock_real_info.close << ",";
-  ss << stock_real_info.low << ");";
+  ss << stock_real_info.low << ",";
+  ss << stock_real_info.vol << ");";
 
   return ss.str();
 }
