@@ -393,6 +393,7 @@ Status::State UserInfo::SubmitOrder(SubmitOrderReq& req) {
 
   StockGroup* g = GetGroup(req.group_id);
   if (NULL == g) {
+    UnlockThreadrw(data_->lock_);
     LOG_ERROR2("user:%s submit order error: group_id:%d not exist",
                data_->name_.data(), req.group_id);
     return Status::GROUP_NOT_EXIST;
@@ -406,6 +407,7 @@ Status::State UserInfo::SubmitOrder(SubmitOrderReq& req) {
 
   STOCK_REAL_MAP stock = engine_->GetStockRealInfoMapCopy(req.code);
   if (stock.empty()) {
+    UnlockThreadrw(data_->lock_);
     LOG_ERROR2("stock:%s NOT EXIST", req.code.data());
     return Status::STOCK_NOT_EXIST;
   }
@@ -421,6 +423,7 @@ Status::State UserInfo::SubmitOrder(SubmitOrderReq& req) {
   }
 
   if (Status::SUCCESS != status) {
+    UnlockThreadrw(data_->lock_);
     return status;
   }
   // insert into mysql
@@ -438,6 +441,7 @@ Status::State UserInfo::SubmitOrder(SubmitOrderReq& req) {
       << frozen << ")";
   MYSQL_ROWS_VEC row;
   if (!engine_->ExcuteStorage(1, oss.str(), row)) {
+    UnlockThreadrw(data_->lock_);
     LOG_ERROR2("user:%s submit order error: mysql error",
                data_->name_.data());
     return Status::MYSQL_ERROR;
