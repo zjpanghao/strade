@@ -14,19 +14,19 @@ CLEAN = make clean
 all: strade_share strade_share_logic candlestick realinfo realtime user
 
 strade_share:
-    cd $(PLUGINS_DIR)/$(STRADE_SHARE)&&$(CLEAN)&&$(MAKE)
+	cd $(PLUGINS_DIR)/$(STRADE_SHARE)&&$(CLEAN)&&$(MAKE)
 
 strade_share_logic:
-    cd $(PLUGINS_DIR)/$(STRADE_SHARE_LOGIC)&&$(CLEAN)&&$(MAKE)
+	cd $(PLUGINS_DIR)/$(STRADE_SHARE_LOGIC)&&$(CLEAN)&&$(MAKE)
 
 candlestick:
-    cd $(PLUGINS_DIR)/$(CANDLESTICK)&&$(CLEAN)&&$(MAKE)
+	cd $(PLUGINS_DIR)/$(CANDLESTICK)&&$(CLEAN)&&$(MAKE)
 
 realinfo:
-    cd $(PLUGINS_DIR)/$(REALINFO)&&$(CLEAN)&&$(MAKE)
+	cd $(PLUGINS_DIR)/$(REALINFO)&&$(CLEAN)&&$(MAKE)
 
 realtime:
-    cd $(PLUGINS_DIR)/$(REALTIME)&&$(CLEAN)&&$(MAKE)
+	cd $(PLUGINS_DIR)/$(REALTIME)&&$(CLEAN)&&$(MAKE)
 
 user:
-    cd $(PLUGINS_DIR)/$(USER)&&$(CLEAN)&&$(MAKE)
+	cd $(PLUGINS_DIR)/$(USER)&&$(CLEAN)&&$(MAKE)
