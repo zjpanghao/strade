@@ -43,7 +43,7 @@ bool StradeShareTimer::InitParam() {
 void StradeShareTimer::Update(int opcode) {
   switch (opcode) {
     case REALTIME_MARKET_VALUE_UPDATE: {
-      JudgeUpdateTodayHist();
+//      JudgeUpdateTodayHist();
       break;
     }
     default: {
@@ -65,7 +65,7 @@ void StradeShareTimer::OnTimeLoadStockVisitCallback(
   StockTotalInfo stock_total_info;
   MYSQL_ROWS_VEC::iterator row_iter(rows_vec.begin());
   for (; row_iter != rows_vec.end(); ++row_iter) {
-    std::vector<std::string> column_vec = (*row_iter);
+    std::vector<std::string>& column_vec = (*row_iter);
     assert(column_vec.size() == column_num);
     std::string stock_code = column_vec[0];
     if (stock_code.empty()) {
@@ -169,6 +169,8 @@ std::string StradeShareTimer::SerializeStockHistSql(
   ss << stock_real_info.high << ",";
   ss << stock_real_info.close << ",";
   ss << stock_real_info.low << ");";
+
+  return ss.str();
 }
 
 } /* namespace strade_share_logic */
