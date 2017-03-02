@@ -255,7 +255,7 @@ Status::State UserInfo::GetGroupStock(GroupId group_id, StockCodeList& stocks) {
 //    group_id = data_->default_gid_;
 //  }
 
-  StockGroup *g = GetGroup(group_id);
+  StockGroup *g = GetGroupWithNonLock(group_id);
   if (NULL == g) {
     LOG_ERROR2("user:%s get group stock error: group_id:%d not exist",
                data_->name_.data(), group_id);
@@ -301,7 +301,26 @@ GroupStockPosition* UserInfo::GetGroupStockPosition(GroupId group_id,
                                           const std::string& code) {
   base_logic::RLockGd lock(data_->lock_);
 
-  StockGroup* g = GetGroup(group_id);
+  StockGroup* g = GetGroupWithNonLock(group_id);
+  if (NULL == g) {
+    LOG_ERROR2("user:%s get stock position error: group_id:%d not exist",
+               data_->name_.data(), group_id);
+    return NULL;
+  }
+
+  for (size_t i = 0; i < data_->stock_position_list_.size(); ++i) {
+    if (data_->stock_position_list_[i].group_id() == group_id
+        && data_->stock_position_list_[i].code() == code) {
+      return &data_->stock_position_list_[i];
+    }
+  }
+  return NULL;
+}
+
+GroupStockPosition* UserInfo::GetGroupStockPositionWithNonLock(
+                                          GroupId group_id,
+                                          const std::string& code) {
+  StockGroup* g = GetGroupWithNonLock(group_id);
   if (NULL == g) {
     LOG_ERROR2("user:%s get stock position error: group_id:%d not exist",
                data_->name_.data(), group_id);
@@ -320,7 +339,7 @@ GroupStockPosition* UserInfo::GetGroupStockPosition(GroupId group_id,
 GroupStockPositionList UserInfo::GetGroupStockPosition(GroupId group_id) {
   base_logic::RLockGd lock(data_->lock_);
 
-  StockGroup* g = GetGroup(group_id);
+  StockGroup* g = GetGroupWithNonLock(group_id);
   if (NULL == g) {
     LOG_ERROR2("user:%s get stock position error: group_id:%d not exist",
                data_->name_.data(), group_id);
@@ -351,7 +370,7 @@ Status::State UserInfo::OnBuyOrder(SubmitOrderReq& req, double* frozen) {
 
   need += round_commission + transfer_fee;
 
-  StockGroup* g = GetGroup(req.group_id);
+  StockGroup* g = GetGroupWithNonLock(req.group_id);
   assert(NULL != g);
   if (need > g->available_capital()) {
     LOG_ERROR2("available capital not enough, "
@@ -367,7 +386,7 @@ Status::State UserInfo::OnBuyOrder(SubmitOrderReq& req, double* frozen) {
 }
 
 Status::State UserInfo::OnSellOrder(SubmitOrderReq& req) {
-  GroupStockPosition* p = GetGroupStockPosition(req.group_id, req.code);
+  GroupStockPosition* p = GetGroupStockPositionWithNonLock(req.group_id, req.code);
   if (NULL == p) {
     LOG_ERROR2("user:%s submit order error: no stock:%s position",
         data_->name_.data(), req.code.data());
@@ -391,8 +410,9 @@ Status::State UserInfo::SubmitOrder(SubmitOrderReq& req) {
 //    req.group_id = data_->default_gid_;
 //  }
 
-  StockGroup* g = GetGroup(req.group_id);
+  StockGroup* g = GetGroupWithNonLock(req.group_id);
   if (NULL == g) {
+    UnlockThreadrw(data_->lock_);
     LOG_ERROR2("user:%s submit order error: group_id:%d not exist",
                data_->name_.data(), req.group_id);
     return Status::GROUP_NOT_EXIST;
@@ -406,6 +426,7 @@ Status::State UserInfo::SubmitOrder(SubmitOrderReq& req) {
 
   STOCK_REAL_MAP stock = engine_->GetStockRealInfoMapCopy(req.code);
   if (stock.empty()) {
+    UnlockThreadrw(data_->lock_);
     LOG_ERROR2("stock:%s NOT EXIST", req.code.data());
     return Status::STOCK_NOT_EXIST;
   }
@@ -421,6 +442,7 @@ Status::State UserInfo::SubmitOrder(SubmitOrderReq& req) {
   }
 
   if (Status::SUCCESS != status) {
+    UnlockThreadrw(data_->lock_);
     return status;
   }
   // insert into mysql
@@ -438,6 +460,7 @@ Status::State UserInfo::SubmitOrder(SubmitOrderReq& req) {
       << frozen << ")";
   MYSQL_ROWS_VEC row;
   if (!engine_->ExcuteStorage(1, oss.str(), row)) {
+    UnlockThreadrw(data_->lock_);
     LOG_ERROR2("user:%s submit order error: mysql error",
                data_->name_.data());
     return Status::MYSQL_ERROR;
@@ -466,7 +489,7 @@ Status::State UserInfo::SubmitOrder(SubmitOrderReq& req) {
 }
 
 bool UserInfo::OnBuyOrderDone(OrderInfo* order) {
-  StockGroup* g = GetGroup(order->group_id());
+  StockGroup* g = GetGroupWithNonLock(order->group_id());
   assert(g != NULL);
   order->set_available_capital(g->available_capital());
 
@@ -483,8 +506,8 @@ bool UserInfo::OnBuyOrderDone(OrderInfo* order) {
       << g->available_capital() << ")";
 
   MYSQL_ROWS_VEC row;
-  SSEngine* engine = GetStradeShareEngine();
-  if (!engine->ExcuteStorage(1, oss.str(), row)) {
+//  SSEngine* engine = GetStradeShareEngine();
+  if (!engine_->ExcuteStorage(1, oss.str(), row)) {
     LOG_ERROR2("user:%s update buy order mysql error", data_->name_.data());
     return false;
   }
@@ -494,7 +517,7 @@ bool UserInfo::OnBuyOrderDone(OrderInfo* order) {
   StockPositionId id = atoi(row[0][0].data());
   FakeStockPosition fp(id, order);
   GroupStockPosition* gp =
-      GetGroupStockPosition(order->group_id(), order->code());
+      GetGroupStockPositionWithNonLock(order->group_id(), order->code());
   if (NULL == gp) {
     GroupStockPosition p(data_->id_, order->group_id(), order->code());
     data_->stock_position_list_.push_back(p);
@@ -521,7 +544,7 @@ bool UserInfo::OnBuyOrderDone(OrderInfo* order) {
       << order->deal_num() << ","
       << 0 << ")";
   row.clear();
-  if (!engine->ExcuteStorage(1, oss.str(), row)) {
+  if (!engine_->ExcuteStorage(1, oss.str(), row)) {
     LOG_ERROR2("user:%s AUTO generate order error: mysql error",
                data_->name_.data());
     return false;
@@ -536,12 +559,12 @@ bool UserInfo::OnBuyOrderDone(OrderInfo* order) {
   new_order->Init(*order);
 
   gp->Delegate(order->deal_num());
-  engine->AttachObserver(new_order);
+  engine_->AttachObserver(new_order);
   return true;
 }
 
 bool UserInfo::OnSellOrderDone(OrderInfo* order) {
-  StockGroup* g = GetGroup(order->group_id());
+  StockGroup* g = GetGroupWithNonLock(order->group_id());
   assert(g != NULL);
   // update user available capital
   double profit = order->deal_price()*order->deal_num();
@@ -554,7 +577,7 @@ bool UserInfo::OnSellOrderDone(OrderInfo* order) {
   // pick FakeStockPosition
   FakeStockPositionList fp_list;
   GroupStockPosition* gp =
-        GetGroupStockPosition(order->group_id(), order->code());
+        GetGroupStockPositionWithNonLock(order->group_id(), order->code());
   if (NULL == gp) {
     LOG_ERROR2("user:%s not find stock:%s group:%d position",
                data_->name_.data(), order->code().data(), order->group_id());
@@ -593,8 +616,8 @@ bool UserInfo::OnSellOrderDone(OrderInfo* order) {
       << order->available_capital() << ","
       << "'" << h << "')";
 
-  SSEngine* engine = GetStradeShareEngine();
-  if (!engine->WriteData(oss.str())) {
+//  SSEngine* engine = GetStradeShareEngine();
+  if (!engine_->WriteData(oss.str())) {
     LOG_ERROR2("user:%s update sell order mysql error", data_->name_.data());
     return false;
   }
@@ -623,7 +646,7 @@ Status::State UserInfo::OnCancelBuyOrder(const OrderInfo* order) {
   base_logic::WLockGd lock(data_->lock_);
 
   // update user available capital and frozen capital
-  StockGroup* g = GetGroup(order->group_id());
+  StockGroup* g = GetGroupWithNonLock(order->group_id());
   assert(g != NULL);
   g->OnCancelBuyOrder(order->frozen());
 
@@ -640,8 +663,10 @@ Status::State UserInfo::OnCancelBuyOrder(const OrderInfo* order) {
 }
 
 Status::State UserInfo::OnCancelSellOrder(const OrderInfo* order) {
+  base_logic::WLockGd lock(data_->lock_);
+
   GroupStockPosition* p =
-      GetGroupStockPosition(order->group_id(), order->code());
+      GetGroupStockPositionWithNonLock(order->group_id(), order->code());
   assert(p != NULL);
   p->OnOrderCancel(order->order_num());
 
@@ -695,7 +720,9 @@ Status::State UserInfo::OnCancelOrder(OrderId order_id) {
 }
 
 Status::State UserInfo::OnModifyInitCapital(GroupId group_id, double capital) {
-  StockGroup* g = GetGroup(group_id);
+  base_logic::WLockGd lock(data_->lock_);
+
+  StockGroup* g = GetGroupWithNonLock(group_id);
   if (NULL == g) {
     return Status::GROUP_NOT_EXIST;
   }

@@ -75,6 +75,8 @@ class UserInfo : public base_logic::AbstractDao {
  private:
   Status::State CancleOrder(OrderInfo* order);
   StockGroup* GetGroupWithNonLock(GroupId group_id);
+  GroupStockPosition* GetGroupStockPositionWithNonLock(GroupId group_id,
+                                                       const std::string& code);
   void Deserialize();
   bool InitStockGroup();
   bool InitStockPosition();
