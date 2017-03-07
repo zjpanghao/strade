@@ -21,7 +21,7 @@ CUSTOM_THIRD_PATH = $(LIB_DIR)/third_party
 LINK_PATHS = -L./ -L/usr/local/libmemcached-1.0.7/lib/  -L/usr/local/lib -L/usr/lib64/mysql
 
 # Flags passed to the preprocessor.
-CPPFLAGS += -isystem -shared -fPIC -_DB_POOL_ -D_DB_POOL_ -D_DEBUG -DUSR_LOG_MSG -DPROCESS_WORK -DHEAD_SHORT
+CPPFLAGS += -isystem -shared -fPIC -D_DB_POOL_ -D_DEBUG -DUSR_LOG_MSG -DPROCESS_WORK -DHEAD_SHORT
 
 # Flags passed to the C++ compiler.
 CXXFLAGS += -g  -Wextra -pthread -shared -fPIC

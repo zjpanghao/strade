@@ -24,7 +24,7 @@
 
 int main(int agrc, char* argv[]) {
   fcgi_module::FcgiModule fcgi_client;
-  fcgi_client.Init("/var/www/tmp/testcorefile", API_TYPE, LOG_TYPE);
+  fcgi_client.Init(STRADE_SOCKET_PATH, API_TYPE, LOG_TYPE);
   fcgi_client.Run();
   fcgi_client.Close();     
   return 0;
