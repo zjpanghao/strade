@@ -60,8 +60,8 @@ $(PROC_NAME).o:
 mig_log.o:
 	$(COMPILE) $(LIBRARY_PATH)/public/log/mig_log.cc
 	
-fcgimodule.o:
-	$(COMPILE) ../base/fcgimodule.cc
+fcgimodule.o: ${FCGI_MODULE_PATH}/fcgimodule.cc
+	  $(COMPILE) ${FCGI_MODULE_PATH}/fcgimodule.cc -I${INCLUDE_PATHS} -I${LIBRARY_PATH}/base/
 
 core_interface.o:
 	$(COMPILE) $(LIBRARY_PATH)/public/comm/core_interface.cc

@@ -23,13 +23,14 @@ class StradeShareTimer : public strade_logic::Observer{
 
   bool OnTimeLoadStockVisit();
 
+  void OnTimeTest();
+
  private:
   virtual void Update(int opcode);
   bool JudgeUpdateTodayHist();
   void WriteStockCurrHistTODB(std::vector<StockRealInfo>& today_hist);
 
-  std::string SerializeStockHistSql(std::stringstream& ss,
-                                    const StockRealInfo& stock_real_info);
+  std::string SerializeStockHistSql(const StockRealInfo& stock_real_info);
 
  private:
   static void OnTimeLoadStockVisitCallback(
