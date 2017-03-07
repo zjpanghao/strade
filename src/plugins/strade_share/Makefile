@@ -21,7 +21,7 @@ CUSTOM_THIRD_PATH = $(LIB_DIR)/third_party
 LINK_PATHS = -L./ -L/usr/local/libmemcached-1.0.7/lib/  -L/usr/local/lib -L/usr/lib64/mysql
 
 # Flags passed to the preprocessor.
-CPPFLAGS += -isystem -shared -fPIC -_DB_POOL_ -D_DB_POOL_ -D_DEBUG -DUSR_LOG_MSG -DUSR_LOG_ERROR -DPROCESS_WORK -DKUN_REDIS_POOL
+CPPFLAGS += -isystem -shared -fPIC -_DB_POOL_ -D_DB_POOL_ -D_DEBUG -DUSR_LOG_MSG -DUSR_LOG_ERROR -DPROCESS_WORK -DKUN_REDIS_POOL -DDEBUG_TEST
 
 # Flags passed to the C++ compiler.
 CXXFLAGS += -g  -Wextra -pthread -shared -fPIC
@@ -126,9 +126,13 @@ order_info.o : ./$(USER_DIR)/logic/order_info.cc ./$(USER_DIR)/logic/order_info.
 	
 stock_util.o : ./$(USER_DIR)/logic/stock_util.cc ./$(USER_DIR)/logic/stock_util.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./$(USER_DIR)/logic/stock_util.cc $(INCLUDE_PATHS)
-		
+
+message.o : ./$(USER_DIR)/logic/message.cc ./$(USER_DIR)/logic/message.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./$(USER_DIR)/logic/message.cc $(INCLUDE_PATHS)
+	
 $(PLUGIN) : basictypes.o config.o strade_share_engine.o strade_share_db.o strade_basic_info.o mysql_engine.o\
-	observer.o subject.o abstract_dao.o user_engine.o user_info.o stock_group.o stock_position.o order_info.o stock_util.o\
+	observer.o subject.o abstract_dao.o user_engine.o user_info.o stock_group.o stock_position.o order_info.o \
+	stock_util.o message.o\
 	$(CUSTOM_THIRD_PATH)/dmg_fp/lib/dmg_fp.a $(LIB_DIR)/base/lib/mybase.a $(LIB_DIR)/third_party/lib/libhiredis.a
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LINK_PATHS)  -lpthread -lexpat -lrt -ldl -lmysqlclient \
 	$^  -o $@ -lexpat -lmysqlclient
