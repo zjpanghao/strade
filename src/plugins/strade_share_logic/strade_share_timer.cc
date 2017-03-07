@@ -155,20 +155,23 @@ void StradeShareTimer::WriteStockCurrHistTODB(
   ss << "`close`,";
   ss << "`low`,";
   ss << "`volume`)";
-  ss << " VALUES (";
+  ss << " VALUES ";
 
-  size_t total_num = today_hist.size();
-  ss << "(" << SerializeStockHistSql(ss, today_hist.at(0)).c_str() << ")";
-  for (size_t i = 1; i < total_num; ++i) {
-    ss << ",(" << SerializeStockHistSql(ss, today_hist.at(i)).c_str() << ")";
+  std::vector<StockRealInfo>::iterator iter(today_hist.begin());
+  for (; iter != today_hist.end(); ++iter) {
+    ss << "(" << SerializeStockHistSql(*iter).c_str() << ")";
+    ss << ",";
   }
+  std::string sql = ss.str();
+  sql = sql.substr(0, sql.size() - 1);
 
   //TODO 此处先改为 test库更新历史数据时通过触发器写入strade库
-  //ss_engine_->WriteData(ss.str());
+  //ss_engine_->WriteData(sql);
 }
 
 std::string StradeShareTimer::SerializeStockHistSql(
-    std::stringstream& ss, const StockRealInfo& stock_real_info) {
+    const StockRealInfo& stock_real_info) {
+  std::stringstream ss;
   ss << "'" << stock_real_info.code.c_str() << "',";
   ss << "'" << StockUtil::Instance()->get_current_day_str().c_str() << "',";
   ss << stock_real_info.open << ",";
@@ -176,8 +179,31 @@ std::string StradeShareTimer::SerializeStockHistSql(
   ss << stock_real_info.close << ",";
   ss << stock_real_info.low << ",";
   ss << stock_real_info.vol << ");";
-
   return ss.str();
+}
+
+void StradeShareTimer::OnTimeTest() {
+  //TODO 测试
+  return;
+  bool r = false;
+  StockTotalInfo stock_total_info;
+  r = ss_engine_->GetStockTotalInfoByCode("hs300", stock_total_info);
+  if (!r) {
+    LOG_DEBUG("hs300 not exists");
+    return;
+  }
+
+  StockRealInfo stock_real_info;
+  r = stock_total_info.GetCurrRealMarketInfo(stock_real_info);
+  if (!r) {
+    LOG_DEBUG("hs300 stock_real_info not exists");
+    return;
+  }
+
+  LOG_DEBUG2("code=%s, time=%d, price=%.2f",
+             stock_real_info.code.c_str(),
+             stock_real_info.tradetime,
+             stock_real_info.price);
 }
 
 } /* namespace strade_share_logic */

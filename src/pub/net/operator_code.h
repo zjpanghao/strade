@@ -3,7 +3,9 @@
 //
 #ifndef _NET_OPERATOR_CODE_H_
 #define _NET_OPERATOR_CODE_H_
-#define STRADE_SOCKET_PATH "/var/www/tmp/strade"
+
+#define STRADE_SOCKET_PATH "/var/www/tmp/stradecorefile"
+
 enum netoperatorcode{
   USER_LOGIN = 1001,
   SEARCH_FUN = 1002,
@@ -31,7 +33,7 @@ enum netoperatorcode{
   CANDLESTICK_HISTORY = 1121,
   REALINFO_LATESTN = 1122,
   REALINFO_INDEX = 1123,
-  REALINFO_TODAY = 1124
+  REALINFO_TODAY = 1124,
 
   USER_ACCOUNT_INFO = 30001,
   YIELDS_HISTORY = 30002,
