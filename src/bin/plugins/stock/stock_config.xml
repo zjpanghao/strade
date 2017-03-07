@@ -12,7 +12,7 @@
             pass = "9158com"
             name = "WeiShow_new"/>
 
-     <hbase host = "222.73.57.12"
+     <hbase host = "127.0.0.1"
             port = "9090"
             user = "root"
             pass = "nopass"
@@ -21,7 +21,7 @@
   </database>
 
   <cached>
-     <redis host ="61.147.114.72"
+     <redis host ="127.0.0.1"
                 port ="7481"
       pass = "ky_161019"
       name = "11"/>
@@ -32,7 +32,7 @@
    </cached>
 
     <kafka>
-      <broker host = "222.73.34.92"
+      <broker host = "127.0.0.1"
             port = "9092"
             user = "nouser"
             pass = "nopass"
