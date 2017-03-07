@@ -6,6 +6,7 @@
 #include <string>
 #include "core/common.h"
 #include "net/http_data.h"
+//#include "realinfo/src/realinfo_data.h"
 #include "strade_share/strade_share_engine.h"
 #include "logic/strade_basic_info.h"
 namespace realinfo {
@@ -23,7 +24,7 @@ class RealInfoLogic {
  public:
   bool OnRealInfoConnect(struct server *srv, const int socket);
   bool OnRealInfoMessage(struct server *srv, const int socket,
-                         const void *msg, const int len);
+                            const void *msg, const int len);
   bool OnRealInfoClose(struct server *srv, const int socket);
   bool OnBroadcastConnect(struct server *srv, const int socket,
                           const void *data, const int len);
@@ -35,7 +36,7 @@ class RealInfoLogic {
 
  protected:
   bool OnRequestRealInfo(NetBase *kv, struct server *srv, const int socket,
-                         const void *msg, const int len);
+                            const void *msg, const int len);
  private:
   bool CheckCacheDataValid(const std::string &cache_result);
   bool OnMarketIndexInfo(struct server *srv,
@@ -43,18 +44,22 @@ class RealInfoLogic {
                          const void *msg, const int len);
   std::string GetStradeDay(time_t stamp);
   bool Init();
-  bool OnSingleStockLatestRecords(struct server *srv, 
-                                  const int socket,
-                                  NetBase* netbase, 
-                                  const void* msg,
-                                  const int len);
+  bool OnSingleStockLatestRecords(struct server *srv, const int socket,
+                            NetBase* netbase, const void* msg, const int len);
+  bool OnSingleStockTodayRecords(struct server *srv, const int stocket,
+                            NetBase* netbase, const void* msg, const int len);
+                             
   bool GetRealInfo(const strade_logic::StockRealInfo &info,
                    StockRealInfo *real_info,
                    StockDealNInfo *deal_info);
   strade_share::SSEngine*  engine_;
+  bool InitRealInfo(const strade_logic::StockRealInfo &share_info, StockRealInfo *info);
+  bool BuildIndexData(std::list<StockRealInfo> *info_list);
+  bool InitBuyN(strade_logic::StockRealInfo stock_real_info,
+                StockDealNInfo *info);
 };
 
-}  // namespace realinfo
+}  // namespace candlestock
 
 #endif // __PLUGIN__REALINFO_LOGIC___
 
