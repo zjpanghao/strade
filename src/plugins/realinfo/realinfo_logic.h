@@ -48,6 +48,9 @@ class RealInfoLogic {
                                   NetBase* netbase, 
                                   const void* msg,
                                   const int len);
+								  
+  bool OnSingleStockTodayRecords(struct server *srv, const int stocket,
+                                 NetBase* netbase, const void* msg, const int len);
   bool GetRealInfo(const strade_logic::StockRealInfo &info,
                    StockRealInfo *real_info,
                    StockDealNInfo *deal_info);
