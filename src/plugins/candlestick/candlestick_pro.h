@@ -84,6 +84,16 @@ class SendCandleStickHistoryProtocol {
     return json;
   }
 
+  void SetErrorState(int status, std::string error) {
+    SetCommonInfo(status);
+    result_->SetString(L"error", error);
+  }
+
+  void SetCommonInfo(int status) {
+    result_->SetInteger(L"status", status);
+    result_->SetBigInteger(L"timestamp", time(NULL));
+  }
+
   void set_history_info(const std::list<SingleStockInfo> &stock_history_info) {
     stock_history_info_ = stock_history_info;
     AddGroup(L"SingleInfo", stock_history_info_, result_.get());

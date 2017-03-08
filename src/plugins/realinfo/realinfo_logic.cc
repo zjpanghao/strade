@@ -11,6 +11,7 @@
 #include "net/operator_code.h"
 #include "realinfo/realinfo_cache.h"
 #include "realinfo/realinfo_pro.h"
+#include "realinfo/realinfo_today.h"
 #include "dic/base_dic_redis_auto.h"
 #include "strade_share/strade_share_engine.h"
 #include <sstream>
@@ -51,14 +52,8 @@ RealInfoLogic::~RealInfoLogic() {
 
 bool RealInfoLogic::Init() {
   bool r = false;
-  srand (time(NULL));engine_
-  = GetStradeShareEngine();
-  std::string path = DEFAULT_CONFIG_PATH;
-  config::FileConfig* config = config::FileConfig::GetFileConfig();
-  if (config == NULL) {
-    return false;
-  }
-  r = config->LoadConfig(path);
+  srand(time(NULL));
+  engine_ = GetStradeShareEngine();
   return true;
 }
 
@@ -79,7 +74,6 @@ bool RealInfoLogic::OnRealInfoConnect(struct server *srv, const int socket) {
 
 bool RealInfoLogic::OnRealInfoMessage(struct server *srv, const int socket,
                                       const void *msg, const int len) {
-  LOG_MSG2("Recv message %s\n", "hello, word");
   bool r = true;
   do {
     const char* packet = reinterpret_cast<const char*>(msg);
@@ -90,7 +84,7 @@ bool RealInfoLogic::OnRealInfoMessage(struct server *srv, const int socket,
     std::string http_str(packet, len);
     std::string error_str;
     int error_code = 0;
-    scoped_ptr < base_logic::ValueSerializer> serializer(
+    scoped_ptr <base_logic::ValueSerializer> serializer(
         base_logic::ValueSerializer::Create(base_logic::IMPL_HTTP,
                                             &http_str));
     NetBase* value = (NetBase*) (serializer.get()->Deserialize(&error_code,
@@ -98,6 +92,7 @@ bool RealInfoLogic::OnRealInfoMessage(struct server *srv, const int socket,
     LOG_DEBUG2("http_str:%s", http_str.c_str());
     if (NULL == value) {
       error_code = STRUCT_ERROR;
+      LOG_MSG("error struct ");
       SEND_ERROR_INFO(STRUCT_ERROR, "error struct");
       r = true;
       break;
@@ -107,6 +102,10 @@ bool RealInfoLogic::OnRealInfoMessage(struct server *srv, const int socket,
     switch (type) {
       case REALINFO_LATESTN: {
         r = OnSingleStockLatestRecords(srv, socket, value, msg, len);
+        break;
+      }
+      case REALINFO_TODAY: {
+        r = OnSingleStockTodayRecords(srv, socket, value, msg, len);
         break;
       }
       case REALINFO_INDEX: {
@@ -141,50 +140,33 @@ bool RealInfoLogic::OnBroadcastClose(struct server *srv, const int socket) {
 }
 
 bool RealInfoLogic::OnIniTimer(struct server *srv) {
-  if (srv->add_time_task != NULL) {
-  }
   return true;
 }
 
 bool RealInfoLogic::OnTimeout(struct server *srv, char *id, int opcode,
                               int time) {
-  if (opcode == TIME_REALINFO_UPDATE_ALL) {
-  }
   return true;
 }
 
-static StockDealNInfo get_test_data() {
-  StockDealNInfo info;
-  for (int i = 0; i < 5; i++) {
-    StockDealInfo a = { 1.0 + i, 200 * (i + 1) };
-    StockDealInfo b = { 1.0 + 2 * i, 400 * (i + 1) };
-    info.buy.push_back(a);
-    info.sell.push_back(b);
-  }
-  return info;
-
-}
-
-static StockRealInfo get_test_real_data() {
-
-  StockRealInfo info;
-  info.open_price = 3.0;
-  info.yesterday_close_price = 2.5;
-  info.now_price = 3.1;
-  info.low_price = 1.0;
-  info.high_price = 5.0;
-  info.limit_down = info.open_price * 0.9;
-  info.limit_up = info.open_price * 1.1;
-  info.amount = 4455;
-  info.turnover_rate = 0.84;
-  return info;
-}
-
-bool RealInfoLogic::GetRealInfo(const strade_logic::StockRealInfo &info,
-                                StockRealInfo *real_info,
-                                StockDealNInfo *deal_info) {
-  real_info->now_price = rand() % 20 + 1;
-  return true;
+bool RealInfoLogic::InitRealInfo(const strade_logic::StockRealInfo &share_info, StockRealInfo *info) {
+  if (!info)
+    return false;
+  info->open_price = share_info.open;
+  info->low_price = share_info.low;
+  info->yesterday_close_price = share_info.close;
+  info->high_price = share_info.high;
+  info->now_price = share_info.price;
+  info->avg_price = (info->high_price + info->low_price + info->now_price)/3;
+  info->amount = share_info.amount;
+  info->vol = share_info.vol;
+  LOG_MSG2("The vol %f\n", share_info.vol);
+  info->limit_down = share_info.lower;
+  info->limit_up = share_info.upper;
+  info->change_price = info->now_price - info->yesterday_close_price;
+  info->change_rate = (info->now_price - info->yesterday_close_price) / (info->yesterday_close_price + 0.000001);
+  info->turnover_rate = 0;
+  info->name = share_info.name;
+  return true; 
 }
 
 std::string RealInfoLogic::GetStradeDay(time_t stamp) {
@@ -192,10 +174,9 @@ std::string RealInfoLogic::GetStradeDay(time_t stamp) {
   struct tm day;
   localtime_r(&seconds, &day);
   char buf[64];
-  snprintf(buf, 64, "%04d-%02d-%02d", day.tm_year + 1900, day.tm_mon + 1,
-           day.tm_mday);
+  snprintf(buf, 64, "%04d-%02d-%02d", day.tm_year + 1900, day.tm_mon + 1, day.tm_mday);
   LOG_MSG2("The day is %s", buf);
-  return buf;
+  return buf;  
 }
 
 bool RealInfoLogic::CheckCacheDataValid(const std::string &cache_result) {
@@ -216,45 +197,66 @@ bool RealInfoLogic::CheckCacheDataValid(const std::string &cache_result) {
   return false;
 }
 
-std::list<StockRealInfo> build_index_data() {
+bool RealInfoLogic::BuildIndexData(std::list<StockRealInfo> *info_list) {
+  
   std::list<StockRealInfo> ll;
-  std::string names[] = { "上证指数", "深证指数", "沪深300" };
-  for (int i = 0; i < 3; i++) {
+  const char *codes[] = {"sh000001", "sh399001", "hs300"};
+  const char *names[] = {"上证指数", "深证成指", "沪深300"};
+  for (int i = 0; i < sizeof(codes) / sizeof(codes[0]); i++) {
+    strade_logic::StockRealInfo stock_real_info;
+    std::string code = codes[i];
+    if (engine_->GetStockCurrRealMarketInfo(code, stock_real_info) == false) {
+      LOG_MSG2("Get stock error for %s", code.c_str());
+      return false;
+    }
     StockRealInfo info;
-    int k = rand() % 20;
-    info.now_price = 3940 + k * 300;
-    info.change_rate = 0.0004 + (double) k / 10000 * 2;
-    info.change_price = 0.03 + k * 0.005;
-    info.name = names[i];
-    ll.push_back(info);
+    InitRealInfo(stock_real_info, &info);
+    if (i < sizeof(names) / sizeof(names[0]))
+      info.name = names[i];
+    info_list->push_back(info);
   }
-  return ll;
+  return true;
 }
 
-bool RealInfoLogic::OnMarketIndexInfo(struct server *srv, const int socket,
-                                      NetBase* netbase, const void *msg,
-                                      const int len) {
+bool RealInfoLogic::OnMarketIndexInfo(struct server *srv,
+                                      const int socket, NetBase* netbase,
+                                      const void *msg, const int len) {
   SendRealInfoLatestProtocol index_pro;
-  RealInfoCache cache("test");
+  RealInfoCache  cache("test");
   std::string cache_result;
-  if (cache.GetRealInfoIndexCache(&cache_result) == 0
-      && CheckCacheDataValid(cache_result)) {
+  if (cache.GetRealInfoIndexCache(&cache_result) == 0 && CheckCacheDataValid(cache_result)) {
     SEND_HTTP_INFO(cache_result.c_str());
     return true;
   }
-  std::list<StockRealInfo> index_list = build_index_data();
+  std::list<StockRealInfo> index_list;
+  if (BuildIndexData(&index_list) == false) {
+    SEND_ERROR_INFO(-1, "get index data error");
+    return false;
+  }
   index_pro.SetIndexInfo(index_list);
   std::string json = index_pro.GetJson();
   LOG_MSG2("The json %s\n", json.c_str());
   cache.UpdateRealInfoIndexCache(json);
   SEND_HTTP_INFO(json);
   return true;
+  
+}
 
+bool RealInfoLogic::InitBuyN(strade_logic::StockRealInfo stock_real_info,
+                             StockDealNInfo *info) {
+  strade_logic::StockRealInfo::Order *porder = stock_real_info.orders;
+  for (int i = 0; i < 5; i++) {
+    StockDealInfo buy_deal_info = {porder->buy, porder->buy_vol};
+    info->buy.push_back(buy_deal_info);
+    StockDealInfo sell_deal_info = {porder->sale, porder->sale_vol};
+    info->sell.push_back(sell_deal_info);
+    porder++;
+  }
+  return true;
 }
 
 bool RealInfoLogic::OnSingleStockLatestRecords(struct server *srv,
-                                               const int socket,
-                                               NetBase* netbase,
+                                               const int socket, NetBase* netbase,
                                                const void* msg, const int len) {
   bool r = true;
   int err = 0;
@@ -269,49 +271,88 @@ bool RealInfoLogic::OnSingleStockLatestRecords(struct server *srv,
   }
   stock_code = stock_code.substr(0, 6);
   LOG_MSG2("stockcodes %s\n", stock_code.c_str());
-  RealInfoCache cache("test");
+  RealInfoCache  cache("test");
   std::string cache_result;
-  if (cache.GetRealInfoLatestCache(stock_code, &cache_result) == 0
-      && CheckCacheDataValid(cache_result)) {
+  if (cache.GetRealInfoLatestCache(stock_code, &cache_result) == 0 && CheckCacheDataValid(cache_result)) {
     SEND_HTTP_INFO(cache_result.c_str());
     return true;
   }
 
-  LOG_MSG2("%s %d", __FILE__, __LINE__);
   SendRealInfoLatestProtocol candle_pro;
   StockDealNInfo info;
   strade_logic::StockRealInfo stock_real_info;
-#if 0
+
   if (engine_->GetStockCurrRealMarketInfo(stock_code, stock_real_info) == false) {
     LOG_ERROR2("%s", "Get stock error");
     LOG_MSG2("%s", "Get stock error");
-    SEND_ERROR_INFO("error GetStockCurrRealMarketInfo error");
+    SEND_ERROR_INFO(-1, "error GetStockCurrRealMarketInfo error");
     return false;
   }
-#endif
-  info = get_test_data();
-  StockRealInfo real_info = get_test_real_data();
-  strade_logic::STOCK_HIST_MAP hist_map = engine_->GetStockHistMapByCodeCopy(
-      stock_code);
-  if (hist_map.size() == 0) {
-    LOG_MSG2("get his info error %s", stock_code);
-    SEND_ERROR_INFO(NULL_DATA, "get his info error");
+  InitBuyN(stock_real_info, &info);
+  StockRealInfo real_info;
+  InitRealInfo(stock_real_info, &real_info);
+  strade_logic::StockTotalInfo total_info;
+  if (!engine_->GetStockTotalInfoByCode(stock_code, total_info)) {
+    SEND_ERROR_INFO(-1, "error GetStockTotalError");
     return false;
-  } else if (hist_map.size() == 1) {
-    SEND_ERROR_INFO(NULL_DATA, "only one day data!");
-    return false;
-  } else {
-    strade_logic::STOCK_HIST_MAP::iterator mit = hist_map.end();
-    mit--;
-    mit--;
-    strade_logic::StockHistInfo &his_info = mit->second;
-    real_info.yesterday_close_price = his_info.get_close();
   }
 
+  double outstand = total_info.get_outstanding();
+  LOG_MSG2("The outstanding %f", outstand);
+  real_info.turnover_rate =  real_info.vol*100/100000000/(outstand + 0.000000001);
   candle_pro.set_latest_info(info, real_info);
   std::string json = candle_pro.GetJson();
   LOG_MSG2("The json %s\n", json.c_str());
   cache.UpdateRealInfoLatestCache(stock_code, json);
+  SEND_HTTP_INFO(json);
+  return r;
+}
+
+bool RealInfoLogic::OnSingleStockTodayRecords(struct server *srv,
+                                              const int socket, NetBase* netbase,
+                                              const void* msg, const int len) {
+  bool r = true;
+  int err = 0;
+  std::string stock_code;
+  int64 record_type;
+  r = netbase->GetString(L"stock_code", &stock_code);
+  if (!r) {
+    err = -1;
+    LOG_ERROR("OnSingleToday error");
+    SEND_ERROR_INFO(-100, "error stock_code");
+    return false;
+  }
+  stock_code = stock_code.substr(0, stock_code.length() - 1);
+  LOG_MSG2("stockcodes %s\n", stock_code.c_str());
+  RealInfoCache  cache("test");
+  std::string cache_result;
+  if (cache.GetRealInfoTodayCache(stock_code, &cache_result) == 0 && CheckCacheDataValid(cache_result)) {
+    SEND_HTTP_INFO(cache_result.c_str());
+    return true;
+  }
+  
+  LOG_MSG2("%s %d", __FILE__, __LINE__);
+  SendRealInfoLatestProtocol candle_pro;
+  strade_share::STOCK_REAL_MAP today_info = engine_->GetStockRealInfoMapCopy(stock_code);
+  std::list<StockRealInfo> real_list;
+  strade_share::STOCK_REAL_MAP::iterator it = today_info.begin();
+  while (it != today_info.end()) {
+    strade_share::STOCK_REAL_MAP::iterator former = it;
+    const strade_logic::StockRealInfo &stock_real_info = it->second;
+    StockRealInfo real_info;
+    LOG_MSG2("The ts %d\n", it->first);
+    InitRealInfo(stock_real_info, &real_info);
+    real_info.ts = it->first;
+    real_info.time = RealInfoToday::BuildDate(real_info.ts);
+    real_list.push_back(real_info);
+    it++;
+  }
+  RealInfoToday::RemoveDuplicate(&real_list);
+  RealInfoToday::CalculateVol(&real_list);
+  candle_pro.SetTodayRealInfo(real_list);
+  std::string json = candle_pro.GetJson();
+  LOG_MSG2("The json %s\n", json.c_str());
+  cache.UpdateRealInfoTodayCache(stock_code, json);
   SEND_HTTP_INFO(json);
   return r;
 }

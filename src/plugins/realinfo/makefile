@@ -78,6 +78,8 @@ realinfo_logic.o : ./realinfo_logic.cc ./realinfo_logic.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./realinfo_logic.cc $(INCLUDE_PATHS)
 realinfo_cache.o : ./realinfo_cache.cc ./realinfo_cache.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./realinfo_cache.cc $(INCLUDE_PATHS)
+realinfo_today.o : ./realinfo_today.cc ./realinfo_today.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./realinfo_today.cc $(INCLUDE_PATHS)
 		
 http_data.o : $(USER_DIR)/net/http_data.cc $(USER_DIR)/net/http_data.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/net/http_data.cc $(INCLUDE_PATHS)
@@ -119,7 +121,7 @@ radom_in.o:$(THIRD_PATH)/basic/radom_in.cc
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(THIRD_PATH)/basic/radom_in.cc $(INCLUDE_PATHS)
 
 
-$(PLUGIN) : realinfo_cache.o realinfo_init.o realinfo_logic.o  \
+$(PLUGIN) : realinfo_today.o realinfo_cache.o realinfo_init.o realinfo_logic.o  \
 http_data.o http_packet.o mig_log.o basictypes.o error_comm.o  \
 logic_unit.o basic_util.o config.o  \
   \
@@ -127,5 +129,5 @@ basic_util.o \
 md5sum.o radom_in.o \
 $(CUSTOM_THIRD_PATH)/dmg_fp/lib/dmg_fp.a $(LIB_DIR)/base/lib/mybase.a $(LIB_DIR)/third_party/lib/libhiredis.a
 	ln -sf strade_share.so $(SO_DIR)/../strade_share/libstrade_share.so
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LINK_PATHS) -lpthread -lexpat -lrt -lpthread -ldl -liconv -lmysqlclient -lcurl \
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LINK_PATHS) -lpthread -lexpat -lrt -lpthread -ldl -lmysqlclient -lcurl \
 $^ -o $@  -L $(SO_DIR)/../strade_share  -Wl,-rpath=strade_share -Wl,-rpath=. -Wl,-rpath=plugins/realinfo -lstrade_share

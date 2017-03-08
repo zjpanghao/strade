@@ -52,6 +52,10 @@ class RealInfoLogic {
                    StockRealInfo *real_info,
                    StockDealNInfo *deal_info);
   strade_share::SSEngine*  engine_;
+  bool InitRealInfo(const strade_logic::StockRealInfo &share_info, StockRealInfo *info);
+  bool BuildIndexData(std::list<StockRealInfo> *info_list);
+  bool InitBuyN(strade_logic::StockRealInfo stock_real_info,
+                StockDealNInfo *info);
 };
 
 }  // namespace realinfo

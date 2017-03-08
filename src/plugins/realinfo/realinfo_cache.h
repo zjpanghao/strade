@@ -15,7 +15,9 @@ class RealInfoCache {
   explicit RealInfoCache(std::string pool_key);
   ~RealInfoCache();
   int UpdateRealInfoLatestCache(std::string stock_code, std::string value);
+  int UpdateRealInfoTodayCache(std::string stock_code, std::string value);
   int GetRealInfoLatestCache(std::string stock_code, std::string *value);
+  int GetRealInfoTodayCache(std::string stock_code, std::string *value);
   int UpdateRealInfoIndexCache(std::string value);
   int GetRealInfoIndexCache(std::string *value);
 
@@ -28,7 +30,10 @@ class RealInfoCache {
     std::string result = "realinfolatest:";
     return result + code;
   }
-
+  std::string GetRealInfoTodayKey(std::string code) {
+    std::string result = "realinfotoday:";
+    return result + code;
+  }
  private:
   std::string pool_key_;
 };
